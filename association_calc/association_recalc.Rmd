@@ -15,14 +15,12 @@ library(dplyr)
 library(tidyverse)
 
 library(reshape2)
+
 getmode <- function(codes){
   which.max(tabulate(codes))
 }
 
 library(utils)
-
-
-#library(rgdal)
 
 library(raster)
 
@@ -37,53 +35,15 @@ library(diagis)
 
 ```{R}
 
-regionalplt <- read.csv('~/Desktop/usgfbi_50fishnet_mergeed_new_20240109.csv')
+regionalplt <- read.csv('') ## plot information with grid information.
 
 names(regionalplt)
 
-summary(regionalplt$PresentTreeCover)
-```
-```{R}
-
-regionalplt %>%
-  ggplot(., aes(x = Human_Disturbance, y = richness))+
-  geom_point()+
-  geom_smooth()
-
-```
-```{r}
-summary(regionalplt$meanarea)
-```
-
-
-
-```{R}
-regionalcount <- regionalplt %>%
-  group_by(random)%>%
-  summarise(count = n())%>%
-  ungroup()
-
-
 ```
 
 ```{R}
 
-regionalcount %>%
-  ggplot(., aes(x = count))+
-  geom_histogram(bins = 100)
-  #scale_x_continuous(trans = 'log1p')
-
-summary(regionalcount$count)
-
-```
-
-
-
-
-```{R}
-
-trees <- read.csv('~/Desktop/usgfbi_recentadult_trees_newplotid.csv')
-
+trees <- read.csv('') ## tree occurrence information within each forest plot.
 
 
 ```
@@ -92,100 +52,21 @@ trees <- read.csv('~/Desktop/usgfbi_recentadult_trees_newplotid.csv')
 
 names(trees)
 
-
 ```
 
-```{R}
-
-table(trees$management)
-
-summary(trees$management)
-
-```
-
-
-```{r}
-
-summary(1/trees$tph)
-
-```
-
-
-```{R}
-head(trees)
-
-```
-
-```{R}
-
-nrow(treeds[is.na(trees$tph),])
-
-```
-
-
-```{R}
-
-treeds <- trees %>%
-  dplyr::group_by(plotid, year.x)%>%
-  dplyr::summarise(
-    meanarea = mean(1/tph)*10000,
-    meandbh = mean(dbh)
-    #meanage = mean(age),
-  )
-
-  
-head(treeds)
-
-```
-```{R}
-
-treeds %>%
-  ggplot(., aes(x = meanarea))+
-  geom_histogram(bins = 120)+
-  scale_x_continuous(trans = 'log10')
-
-
-```
 ```{R}
 
 summary(treeds$meanarea)
 
 ```
-
-```{R}
-multiplots <- treeds %>%
-  dplyr::group_by(plotid)%>%
-  dplyr::summarize(ntimes = n())
-
-
-multiplots
-
-
-nrow(multiplots[multiplots$ntimes>1,])
-```
-
-
-
-```{R}
-#regionalplt <- regionalplt %>%
- 
-# filter(PresentTreeCover >= 0.1)
-
-```
-
-
-```{R}
-length(unique(trees$spcd))
-
-```
-
+## Extract grids with unique names. Will be used as distinct groups.
 
 ```{R}
 
 gridlist <- unique(regionalplt$random)
 
 ```
-
+### For example...
 
 ```{R}
 
@@ -194,11 +75,6 @@ subplt <- regionalplt %>%
 
 subplt
 
-
-
-```
-
-```{R}
 
 subtrees <- trees %>%
   filter(plotid %in% unique(subplt$plotid))
@@ -213,8 +89,7 @@ subtrees
 ```{R}
 
 
-
-tsub <- dcast(subtrees[,c('spcd', 'plotid')], plotid~spcd, length,value.var = 'spcd')
+tsub <- dcast(subtrees[,c('spcd', 'plotid')], plotid~spcd, length,value.var = 'spcd') ### Convert the grid level dataset as a plot~species checklist.
 
 tsub
 
@@ -239,6 +114,7 @@ tsub
 ncol(tsub)
 
 ```
+### DO NOT NEED TO RUN THE FOLLOWING CHUNK
 
 ```{R}
 
@@ -340,6 +216,9 @@ thred <- 180
 
 ```
 
+
+Initialize the functions that will be leveraged to calculate each features in each grid. 
+
 ```{R}
 
 assosimplefun <- function(tsub){
@@ -354,20 +233,14 @@ assosimplefun <- function(tsub){
   ss <- c()
   nn <- c()
 
-  #print(unique(df$random))
 for(i in 1:(ncol(tsub)-1)){
   for(j in (i+1):ncol(tsub)){
     suba <- tsub[,c(i,j)]
     
     scaler <- log1p(sum(suba[,1])*sum(suba[,2])) # summing up grid cell level abundance and use the logged value as the weigh. 
-    #subb <- suba[suba[,1]*suba[,2]>0,]
     subb <- suba[rowSums(suba[])>0,] # remove the pairs with double zero. 
-    #suba <- suba[suba$scaler>0,]
     if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of value. 
       
-      #ktest <- cor.test(subb[,1],subb[,2]) # Test if the correlation significant or not, p value will be provided. 
-      
-      #if(ktest$p.value < 0.05){ 
       k <- cor(subb[,c(1,2)])[1,2]
       ss <- append(ss,k) # a list of correlations is created.
       
@@ -409,13 +282,13 @@ for(i in 1:(ncol(tsub)-1)){
   for(j in (i+1):ncol(tsub)){
     suba <- tsub[,c(i,j)]
     
-    scaler <- log1p(sum(suba[,1])*sum(suba[,2])) # summing up grid cell level abundance and use the logged value as the weigh. 
-    #subb <- suba[suba[,1]*suba[,2]>0,]
+    scaler <- log1p(sum(suba[,1])*sum(suba[,2])) # sum up grid cell level abundance and use the logged value as the weigh. 
+
     subb <- suba[rowSums(suba[])>0,] # remove the pairs with double zero. 
     #suba <- suba[suba$scaler>0,]
-    if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of value. 
+    if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of abundance in both species. 
       
-      #ktest <- cor.test(subb[,1],subb[,2]) # Test if the correlation significant or not, p value will be provided. 
+      
       
       #if(ktest$p.value < 0.05){ 
       k <- cor(subb[,c(1,2)],method = 'spearman')[1,2]
@@ -611,7 +484,7 @@ pvaluefun <- function(tsub){
   ss <- c()
   nn <- c()
 
-  #print(unique(df$random))
+  
   
   for(i in 1:(ncol(tsub)-1)){
     for(j in (i+1):ncol(tsub)){
@@ -658,9 +531,8 @@ sigfun <- function(tsub){
       suba <- tsub[,c(i,j)]
     
       scaler <- log1p(sum(suba[,1])*sum(suba[,2])) # summing up grid cell level abundance and use the logged value as the weigh. 
-      #subb <- suba[suba[,1]*suba[,2]>0,]
+      
       subb <- suba[rowSums(suba[])>0,] # remove the pairs with double zero. 
-      #suba <- suba[suba$scaler>0,]
       if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of value. 
       
         k <- cor.test(subb[,1], subb[,2])$p.value
@@ -698,9 +570,9 @@ sigfunspear <- function(tsub){
       suba <- tsub[,c(i,j)]
     
       scaler <- log1p(sum(suba[,1])*sum(suba[,2])) # summing up grid cell level abundance and use the logged value as the weigh. 
-      #subb <- suba[suba[,1]*suba[,2]>0,]
+      
       subb <- suba[rowSums(suba[])>0,] # remove the pairs with double zero. 
-      #suba <- suba[suba$scaler>0,]
+      
       if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of value. 
       
         k <- cor.test(subb[,1], subb[,2], method = 'spearman', exact = F)$p.value
@@ -810,7 +682,7 @@ assopspear <- function(df) {
         allp <- append(allp,999)
       }
     }
-    #ss <- as.data.frame(ss)
+    
     allp <- allp[allp<=1]
     return(mean(allp))
   }
@@ -862,7 +734,7 @@ calcassociationnormpvalue <- function(df) {
         allp <- append(allp,999)
       }
     }
-    #ss <- as.data.frame(ss)
+    
     allp <- allp[allp<=1]
     return(mean(allp))
   }
@@ -967,9 +839,9 @@ for(i in 1:(ncol(tsub)-1)){
     suba <- tsub[,c(i,j)]
     
     suba$scaler <- log1p(suba[,1]*suba[,2])
-    #subb <- suba[suba[,1]*suba[,2]>0,]
+    
     subb <- suba[rowSums(suba[])>0,]
-    #suba <- suba[suba$scaler>0,]
+    
     if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){
       
       ktest <- cor.test(subb[,1],subb[,2])
@@ -1084,18 +956,12 @@ for(i in 1:(ncol(tsub)-1)){
       pid <- cbind(pid,k)
       sid <- cbind(sid,suba$scaler)
     }
-    #else{
-    #  k <- 0
-    #  l <- sum(suba$scaler)
-      
-    #  ss[length(ss)+1] <- k
-    #  nn[length(nn)+1] <- l
-    #}
+    
   }
 }
 
   
-#  if(length(ss)>0 & sum(ss)!=0){
+
     pid <- as.data.frame(pid)
     if(ncol(pid)>2){
       rowspid <- rowSums(pid[,2:ncol(pid)])
@@ -1112,9 +978,7 @@ for(i in 1:(ncol(tsub)-1)){
     }
   #return(sum(ss)/length(nn[nn>0]))
   }
-  #else{
-  #  return(-999)
-  #}
+
   }
   }
 
@@ -1153,7 +1017,7 @@ for(i in 1:(ncol(tsub)-1)){
     suba <- tsub[,c(i,j)]
     
     suba$scaler <- log1p(suba[,1]*suba[,2])
-    #subb <- suba[suba[,1]*suba[,2]>0,]
+    
     subb <- suba[rowSums(suba[])>0,]
     if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){
       
@@ -1163,13 +1027,7 @@ for(i in 1:(ncol(tsub)-1)){
       else{
         k <- 0
       }
-      #if(k!=0){
-      #k <- k/abs(k)
-      #}
-      #else{
-      #  k <- k
-      #}
-      #l <- sum(suba$scaler)
+      
       l <- suba$scaler
       
       m <- sum(suba$scaler)
@@ -1178,13 +1036,7 @@ for(i in 1:(ncol(tsub)-1)){
       nn <- append(nn,l)
       
     }
-    #else{
-    #  k <- 0
-    #  l <- sum(suba$scaler)
-      
-    #  ss[length(ss)+1] <- k
-    #  nn[length(nn)+1] <- l
-    #}
+    
   }
 }
 
@@ -1352,7 +1204,7 @@ regionalrichness <- function(df) {
   tsub <- tsub[rowSums(tsub[])>0,]
   tsub <- tsub[,colSums(tsub != 0) > 0]
   
-  #tsub <- tsub[,colSums(tsub != 0)>0]
+  
   if(nrow(tsub)<=thred){
     return(richfun(tsub))
   }else{
@@ -1601,46 +1453,7 @@ regionalbal <- function(df){
 
 
 
-```{R}
-
-library(doParallel)
-detectCores()
-
-```
-
-
-```{R}
-#library(multidplyr)
-#clusters <- new_cluster(8)
-#cluster_library(clusters, c('dplyr', 'ggplot2', 'ppcor', 'knitr', 'plotrix', 'tidyverse'))
-
-#cluster_copy(clusters, 'calcassociationsimple')
-#cluster_copy(clusters, 'calcassociationpartial')
-#cluster_copy(clusters, 'calcassociationnormpvalue')
-#cluster_copy(clusters, 'calcassociationpvalue')
-#cluster_copy(clusters, 'associationsr')
-#cluster_copy(clusters, 'regionalrichness')
-#cluster_copy(clusters, 'richfun')
-#cluster_copy(clusters, 'pvaluefun')
-#cluster_copy(clusters, 'partialfun')
-#cluster_copy(clusters, 'assosimplefun')
-#cluster_copy(clusters, 'trees')
-#cluster_copy(clusters, 'thred')
-#cluster_copy(clusters, 'tidyverse')
-
-```
-
-
-```{R}
-#set.seed(0)
-#sample1 <- regionalplt %>%
-#  filter(random %in% gridlist[1:1000])%>%
-#  partition(clusters)%>%
-#  group_by(random)
-
-```
-
-
+### For the following chunk, run one of the two functions depending on the purpose. To eliminate human modification, run the first. To use the full dataset, run the second one. 
 ```{R}
 
 #subregional <- regionalplt %>%
@@ -1652,7 +1465,7 @@ subregional <- regionalplt
 
 
 
-
+## Grid level calculation. 
 
 ```{R} 
 subregional <- subregional %>%
@@ -1730,63 +1543,8 @@ gridassociation <- subregional %>%
 
 gridassociation
 ```
-```{R}
 
-gridassociation %>%
-  filter( associationsimple>-500 & regionalrichness >-500) %>%
-  ggplot(., aes(x = associationsimple))+
-  geom_histogram(bins = 160)
-
-
-
-
-gridassociation %>%
-  filter(associationsimple>-500 & regionalrichness >-500 & associationpvalue>-555 & associationpvalue<555) %>%
-  ggplot(., aes(x = associationpvalue))+
-  geom_histogram(bins = 100)
-
-
-
-gridassociation %>%
-  filter(associationsimple>-500 & regionalrichness >-500 & associationnormpvalue>-555 & associationnormpvalue<555) %>%
-  ggplot(., aes(x = associationnormpvalue))+
-  geom_histogram(bins = 80)
-
-gridassociation %>%
-  filter(associationsimple>-500 & regionalrichness >-500 & associationnormpvalue>-555 & associationnormpvalue<555 & associationnormpvalue>=0.05) %>%
-  summarise(n())
-
-gridassociation %>%
-  filter(associationsimple>-500 & regionalrichness >-500 & associationnormpvalue>-555 & associationnormpvalue<555 & associationnormpvalue<0.05) %>%
-  summarise(n())
-
-
-
-
-
-summary(lm(associationpartial ~ associationsimple, data = gridassociation[gridassociation$associationsimple>-500 & gridassociation$associationpartial>-500,]))
-gridassociation %>%
-  filter(associationsimple>-500 & regionalrichness >-500) %>%
-  ggplot(., aes(x = regionalrichness))+
-  geom_histogram(bins = 80)
-
-
-```
-
-
-```{R}
-#regionalplt <- regionalplt %>%
-#  left_join(gridassociation, by = 'random')
-#names(regionalplt)
-
-```
-
-```{R}
-
-
-
-```
-
+### Temporarily save the output. 
 
 ```{R}
 
@@ -1794,7 +1552,7 @@ write_csv(regionalplt, '~/Desktop/plot_level_associations_50km_180s_sig_20240404
 
 ```
 
-
+### Get the grid level coordinate information. 
 
 ```{R}
 
@@ -1920,12 +1678,6 @@ ggplot() +
   scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
               '#0DFFEA', '#8CFF41', '#FFDD00',
               '#FF3700', '#C30000'),limits = c(0,0.05), oob = scales::squish)
-#ggplot() + 
-#  geom_map(data = worlddata[worlddata$long<(-60) & worlddata$lat>15,], map = worlddata, aes(x = long, y = lat, group = group, map_id = region), fill = '#bcbcbc', color = '#bcbcbc', size = 0.5)+
-#  geom_point(data = solidplt, aes(x = lon, y = lat, fill = asso2), shape = 22, stroke = NA, size = 4)+
-#  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
- #             '#0DFFEA', '#8CFF41', '#FFDD00',
-  #            '#FF3700', '#C30000'),limits = c(-0.5,0.2), oob = scales::squish)
 
 
 ggplot() + 
@@ -1935,104 +1687,10 @@ ggplot() +
               '#0DFFEA', '#8CFF41', '#FFDD00',
               '#FF3700', '#C30000'),limits = c(-0.4,0), oob = scales::squish)
 
-"ggplot(solidplt, aes(x = lon, y = lat, fill = asso))+
-  geom_point(shape = 22, stroke = NA, size = 2)+
-  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
-              '#0DFFEA', '#8CFF41', '#FFDD00',
-              '#FF3700', '#C30000'),limits = c(-0.4,0), oob = scales::squish)
-  #scale_color_gradient2(limits = c(-20, 1), oob = scales::squish)
-
-
-ggplot(solidplt, aes(x = lon, y = lat, fill = assosimple))+
-  geom_point(shape = 22, stroke = NA, size = 2)+
-  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
-              '#0DFFEA', '#8CFF41', '#FFDD00',
-              '#FF3700', '#C30000'),limits = c(-2,1), oob = scales::squish)
-    
-"
-```
-
-```{R}
-solidplt %>%
-  filter(asso2/asso>=0.25 & asso2 < 0) %>%
-  ggplot(data = ., aes(x = lon, y = lat, fill = asso2)) + 
-  geom_map(data = worlddata[worlddata$long<(-60) & worlddata$lat>15,], map = worlddata, aes(x = long, y = lat, group = group, map_id = region), fill = '#bcbcbc', color = '#bcbcbc', size = 0.5)+
-  geom_point( shape = 22, stroke = NA, size = 4)+
-  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
-              '#0DFFEA', '#8CFF41', '#FFDD00',
-              '#FF3700', '#C30000'),limits = c(-.5,.2), oob = scales::squish)
-
-
-subsolid <- solidplt %>%
-  filter(asso2/asso>=0.25 & asso2 < 0 & asso>-1)
 
 ```
 
-
-
-```{R}
-
-solidplt %>%
-  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = asso))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-solidplt %>%
-  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-
-solidplt %>%
-  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_std, y = asso))+
-  geom_point()+
-  geom_smooth(method = 'lm')+
-  scale_x_continuous(trans = 'log10')
-
-solidplt %>%
-  ggplot(., aes(x = CHELSA_Annual_Precipitation_mean, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'lm')+
-  scale_x_continuous(trans = 'log10')
-
-solidplt %>%
-  ggplot(., aes(x = asso, y = assosr))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-
-solidplt %>%
-  ggplot(., aes(x = asso, y = regionalrichness))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-solidplt %>%
-  ggplot(., aes(x = assoneg, y = regionalrichness))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-
-```
-
-```{R}
-
-solidplt %>%
-  ggplot(., aes(x = asso))+
-  geom_histogram(bins = 80)
-
-
-solidplt %>%
-  ggplot(., aes(x = assoneg))+
-  geom_histogram()
-
-
-```
-
-
+## Save the final output.
 
 ```{R}
 
