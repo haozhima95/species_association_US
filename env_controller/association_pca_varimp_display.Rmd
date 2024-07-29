@@ -1,0 +1,114 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-08-25"
+---
+
+```{R}
+
+broadimp <- read.csv('~/Desktop/association/bestmodel_assosimple_all1_pca_sig_varip_20240604.csv')
+
+
+broadimp$modelname <- 'model1'
+
+
+```
+
+```{R}
+
+for(i in 2:10){
+  addon <- read.csv(paste0('~/Desktop/association/bestmodel_assosimple_all',i,'_pca_sig_varip_20240604.csv'))
+  
+  addon$modelname <- paste0('model',i)
+  
+  broadimp <- rbind(broadimp, addon)
+  
+}
+
+
+broadimp <- broadimp[order(broadimp$variable),]
+
+featurecate <- c(rep('Climate', 50), rep('Soil', 50),  rep('Vegetation', 50))
+
+broadimp$featurecate <- featurecate
+
+```
+
+
+```{R}
+
+head(broadimp, 10L)
+
+```
+
+```{R}
+
+library(dplyr)
+
+library(ggplot2)
+
+
+```
+
+
+```{R}
+
+broadsum <- broadimp %>% group_by(variable, featurecate) %>%
+  dplyr::summarise(
+                   percentage_mean = mean(percentage)) %>%
+  ungroup()
+
+
+broadsum %>%
+  filter(featurecate == 'Climate') %>%
+  summarise(sum = sum(percentage_mean))
+
+broadsum %>%
+  filter(featurecate == 'Soil') %>%
+  summarise(sum = sum(percentage_mean))
+
+
+broadsum %>%
+ filter(featurecate == 'Human') %>%
+ summarise(sum = sum(percentage_mean))
+
+
+broadsum %>%
+  filter(featurecate == 'Vegetation') %>%
+  summarise(sum = sum(percentage_mean))
+```
+
+
+
+```{R}
+broadsum$featurecate <- factor(broadsum$featurecate, levels = c( 'Soil', 'Vegetation','Climate'))
+broadsum$variable <- factor(broadsum$variable, levels = c( 
+                                                            'climpc5','climpc4','climpc3','climpc2','climpc1',
+                                                              #'humanpc3', 'humanpc2','humanpc1',
+                                                            'vegpc5','vegpc4','vegpc3', 'vegpc2', 'vegpc1',
+                                                           'soilpc5','soilpc4','soilpc3', 'soilpc2', 'soilpc1'
+                                                          
+                                                         
+                                                                                                                ))
+
+library(ggplot2)
+
+broadp0<-ggplot(broadsum, aes(x = featurecate, y = percentage_mean, fill = variable))+
+  geom_bar(position = 'stack', stat = 'identity')+
+  scale_fill_viridis_d()+
+  #scale_y_continuous(limits = c(0,0.5))+
+  theme_classic()+
+  theme(axis.title = element_blank(), axis.text.x = element_text(size = 20, color = 'black'), axis.text.y = element_text(size = 20, color = 'black'),legend.position ='none')+
+  coord_flip()
+
+
+
+ggplot(broadsum, aes(x = featurecate, y = percentage_mean, fill = variable))+
+  geom_bar(position = 'stack', stat = 'identity')+
+  scale_fill_viridis_d()+
+  scale_y_continuous(limits = c(0,0.6))+
+  theme_classic()+
+  theme(axis.title = element_blank(), axis.text.x = element_text(size = 20, color = 'black'), axis.text.y = element_text(size = 20, color = 'black'))+
+  coord_flip()
+
+```
