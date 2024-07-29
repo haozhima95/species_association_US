@@ -91,24 +91,10 @@ deimp$variable <- factor(deimp$variable, levels = c(
   
   'meandensity',
   'height_mean',
-  #'stddensity',
-  
-  #'CanopyHeight_mean',
-  #'CHELSA_Isothermality_mean',
-  #'CHELSA_Precipitation_of_Driest_Quarter_mean',
-  #'PET_std',
-  
-  
-  #'NDVI_mean',
+
   'regionalrichness',
-#'CHELSA_Annual_Precipitation_std',
- # 'CHELSA_Temperature_Annual_Range_std',
   'CHELSA_Temperature_Annual_Range_mean',
   'CHELSA_Annual_Precipitation_mean',
-
-
-#'EarthEnvTopoMed_Elevation_std',
-#'CHELSA_Annual_Mean_Temperature_std',
 'CHELSA_Annual_Mean_Temperature_mean'
 
   ))
