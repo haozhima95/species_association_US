@@ -1,0 +1,77 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-06-03"
+---
+
+```{r}
+
+library(rgbif)
+library(dplyr)
+
+library(ggplot2)
+
+library(readr)
+
+library(feather)
+
+```
+
+
+```{r}
+setwd('~/Desktop/association/fia_state_tables')
+df <- do.call(rbind, lapply(list.files(path = '.', pattern = 'plotinfo.csv'), read.csv, header = T, sep = ','))
+head(df)
+
+```
+
+```{r}
+treeds <- do.call(rbind, lapply(list.files(path = '.', pattern = 'treeinfo.csv'), read.csv, header = T, sep = ','))
+  
+```
+
+
+```{r}
+
+treeds <- treeds %>%
+  mutate(dbh_cm = DIA*2.54,
+         ht_m = HT*0.3048,
+         acht_m = ACTUALHT*0.3048)
+
+
+treeds <- treeds %>%
+  filter(dbh_cm >= 10)
+```
+
+
+```{r}
+write_csv(treeds, '~/Desktop/association/fia_data/fia_trees_dbh10.csv')
+
+
+```
+
+
+
+```{r}
+df<-df %>%
+  mutate(longitude = LON,
+         latitude = LAT)
+
+
+write_csv(df, '~/Desktop/association/fia_data/fia_plots.csv')
+
+```
+
+
+```{r}
+
+
+```
+
+
+```{r}
+```
+
+
+
+
