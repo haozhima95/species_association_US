@@ -68,10 +68,6 @@ broadsum %>%
   summarise(sum = sum(percentage_mean))
 
 
-broadsum %>%
- filter(featurecate == 'Human') %>%
- summarise(sum = sum(percentage_mean))
-
 
 broadsum %>%
   filter(featurecate == 'Vegetation') %>%
@@ -84,7 +80,6 @@ broadsum %>%
 broadsum$featurecate <- factor(broadsum$featurecate, levels = c( 'Soil', 'Vegetation','Climate'))
 broadsum$variable <- factor(broadsum$variable, levels = c( 
                                                             'climpc5','climpc4','climpc3','climpc2','climpc1',
-                                                              #'humanpc3', 'humanpc2','humanpc1',
                                                             'vegpc5','vegpc4','vegpc3', 'vegpc2', 'vegpc1',
                                                            'soilpc5','soilpc4','soilpc3', 'soilpc2', 'soilpc1'
                                                           
