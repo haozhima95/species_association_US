@@ -1,0 +1,143 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-08-25"
+---
+
+
+```{R}
+
+deimp <- read.csv('~/Desktop/association/bestmodel_1_varip_all_asso_reserved_50km_180s_sig_20240606.csv')
+
+
+deimp$modelname <- 'model1'
+
+
+```
+
+
+
+```{R}
+
+for(i in 2:10){
+  addon <- read.csv(paste0('~/Desktop/association/bestmodel_',i,'_varip_all_asso_reserved_50km_180s_sig_20240606.csv'))
+  
+  addon$modelname <- paste0('model',i)
+  
+  deimp <- rbind(deimp, addon)
+  
+}
+
+deimp <- deimp[order(deimp$variable),]
+
+
+```
+
+
+```{R}
+
+
+
+
+featurecate <- c(
+  #rep('Vegetation',10),
+  rep('Climate',30),
+  #rep('Soil',10),
+  #rep('Topography',10),
+  rep('Vegetation', 30)
+  #rep('Soil',30),
+  #rep('Vegetation',10)
+)
+
+deimp$feature <- featurecate
+
+```
+
+```{R}
+
+library(dplyr)
+
+library(ggplot2)
+
+
+```
+
+
+```{R}
+
+desum <- deimp %>% group_by(variable) %>%
+  dplyr::summarise(relative_importance_mean = mean(relative_importance),
+                   scaled_importance_mean = mean(scaled_importance),
+                   percentage_mean = mean(percentage)) %>%
+  ungroup()
+
+```
+
+
+
+```{R}
+
+#broadimp$variable <- factor(broadimp$variable, levels = )
+
+
+varnames = unique(deimp$variable)
+
+varnames <- varnames[order(varnames,decreasing = T)]
+
+
+deimp$variable <- factor(deimp$variable, levels = c(
+  
+  
+  
+  'meandensity',
+  'height_mean',
+  #'stddensity',
+  
+  #'CanopyHeight_mean',
+  #'CHELSA_Isothermality_mean',
+  #'CHELSA_Precipitation_of_Driest_Quarter_mean',
+  #'PET_std',
+  
+  
+  #'NDVI_mean',
+  'regionalrichness',
+#'CHELSA_Annual_Precipitation_std',
+ # 'CHELSA_Temperature_Annual_Range_std',
+  'CHELSA_Temperature_Annual_Range_mean',
+  'CHELSA_Annual_Precipitation_mean',
+
+
+#'EarthEnvTopoMed_Elevation_std',
+#'CHELSA_Annual_Mean_Temperature_std',
+'CHELSA_Annual_Mean_Temperature_mean'
+
+  ))
+
+
+
+
+dep2<-ggplot(deimp, aes(x = variable, y = percentage, color = feature, fill = feature))+
+  stat_summary(fun.data = 'mean_cl_normal', geom = 'errorbar',width = 0.5, color = '#000000')+
+  stat_summary(fun.y = mean, geom = 'bar', alpha = 0.5, color = 'black')+
+  geom_jitter(width = 0.25, size  = 3)+
+  theme_classic()+
+  #scale_y_continuous(limits = c(0,0.2))+
+  scale_color_manual(values = c('#3589a5', '#694f03',  '#669966' ))+
+  scale_fill_manual(values = c('#3589a5',  '#694f03',  '#669966' ))+
+  theme(axis.title = element_blank(), axis.text.x = element_text(size = 20, color = 'black', vjust = 0.5), axis.text.y = element_blank(), legend.position = 'none')+
+  coord_flip()
+
+
+
+ggplot(deimp, aes(x = variable, y = percentage, color=feature, fill = feature))+
+  stat_summary(fun.data = 'mean_cl_normal', geom = 'errorbar',width = 0.5, color = '#000000')+
+  stat_summary(fun.y = mean, geom = 'bar', alpha = 0.5, color = 'black')+
+  geom_jitter(width = 0.25)+
+  theme_classic()+
+  #scale_y_continuous(limits = c(0,0.2))+
+  scale_color_manual(values = c('#3589a5',  '#694f03',  '#669966' ))+
+  scale_fill_manual(values = c('#3589a5', '#694f03',  '#669966' ))+
+  theme(axis.title = element_text(size = 30, color = 'black'), axis.text.x = element_text(size = 20, color = 'black', vjust = 0.5), axis.text.y = element_text(size = 20, color = 'black'), legend.position = 'none', axis.title.y = element_blank())+
+  coord_flip()
+
+```
