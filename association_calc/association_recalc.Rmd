@@ -1,0 +1,2268 @@
+---
+title: "Untitled"
+output: html_document
+date: "2023-04-08"
+---
+
+```{R}
+
+library(ggplot2)
+
+library(readr)
+
+library(dplyr)
+
+library(tidyverse)
+
+library(reshape2)
+getmode <- function(codes){
+  which.max(tabulate(codes))
+}
+
+library(utils)
+
+
+#library(rgdal)
+
+library(raster)
+
+library(Hmisc)
+
+library(diagis)
+
+```
+
+
+
+
+```{R}
+
+regionalplt <- read.csv('~/Desktop/association/fia_data/fia_with_50fishnet_comp_20240603.csv')
+
+names(regionalplt)
+
+summary(regionalplt$PresentTreeCover)
+```
+```{R}
+
+regionalplt %>%
+  ggplot(., aes(x = Human_Disturbance, y = richness))+
+  geom_point()+
+  geom_smooth()
+
+```
+```{r}
+summary(regionalplt$meanarea)
+```
+
+```{r}
+summary(regionalplt$INVYR)
+
+
+
+```
+
+
+```{R}
+regionalcount <- regionalplt %>%
+  group_by(random)%>%
+  summarise(count = n())%>%
+  ungroup()
+
+
+```
+
+```{R}
+
+regionalcount %>%
+  ggplot(., aes(x = count))+
+  geom_histogram(bins = 100)
+  #scale_x_continuous(trans = 'log1p')
+
+summary(regionalcount$count)
+
+```
+
+
+
+
+
+```{R}
+
+trees <- read.csv('~/Desktop/association/fia_data/fia_trees_dbh10.csv')
+
+
+
+```
+
+```{R}
+
+names(trees)
+
+
+```
+
+
+
+
+```{R}
+head(trees)
+
+```
+
+```{R}
+
+nrow(treeds[is.na(trees$tph),])
+
+```
+
+
+```{R}
+
+treeds <- trees %>%
+  dplyr::group_by(PLT_CN, INVYR.x)%>%
+  dplyr::summarise(
+    #meanarea = mean(1/tph)*10000,
+    meandbh = mean(dbh_cm)
+    #meanage = mean(age),
+  )
+
+  
+head(treeds)
+
+```
+
+
+```{R}
+multiplots <- treeds %>%
+  dplyr::group_by(PLT_CN)%>%
+  dplyr::summarize(ntimes = n())
+
+
+multiplots
+
+
+nrow(multiplots[multiplots$ntimes>1,])
+```
+
+
+```{R}
+length(unique(trees$SPCD))
+
+```
+
+
+```{R}
+
+gridlist <- unique(regionalplt$random)
+
+```
+
+
+```{R}
+
+subplt <- regionalplt %>%
+  filter(random == 2707319)
+
+subplt
+
+
+
+```
+
+```{R}
+
+subtrees <- trees %>%
+  filter(PLT_CN %in% unique(subplt$PLT_CN))
+
+
+subtrees
+
+subtrees <- subtrees[complete.cases(subtrees$ht_m),]
+
+subtrees
+```
+
+```{r}
+subtrees %>%
+  group_by(PLT_CN) %>%
+  summarise(
+    maxht = max(ht_m,na.rm = T)
+  )%>%
+  ungroup()
+
+
+```
+
+
+
+
+
+```{R}
+
+plts <- unique(regionalplt$PLT_CN)
+
+theplot <- plts[sample(1:length(plts),1)]
+
+subtrees <- trees %>%
+  filter(PLT_CN == theplot)
+
+
+subtrees
+
+```
+
+```{r}
+trees[!complete.cases(trees$ht_m),1][1]
+```
+
+
+
+
+```{R}
+
+
+
+tsub <- dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length,value.var = 'SPCD')
+
+tsub
+
+pid <- tsub$PLT_CN
+sid <- tsub$PLT_CN
+
+tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+
+tsub
+
+
+
+```
+```{R}
+
+
+
+#tsub <- tsub[,colSums(tsub != 0)>0]
+#tsub <- tsub[, sapply(tsub, function(col) length(unique(col))) > 2]
+
+ncol(tsub)
+
+```
+
+```{R}
+
+library(ppcor)
+ss <- c()
+
+nn <- c()
+
+zz <- c()
+
+#tsub <- tsub %>%
+ # sample_n(size = 100)
+
+tsub <- tsub[rowSums(tsub[])>0,]
+tsub <- tsub[,colSums(tsub != 0)>0]
+
+for(i in 1:(ncol(tsub)-1)){
+  for(j in (i+1):ncol(tsub)){
+    
+    
+    suba <- tsub[,c(i,j)]
+    
+    cols = colnames(suba)
+    
+    scaler <- log1p(sum(suba[,1]*suba[,2]))
+    subb <- suba[rowSums(suba[])>0,]
+    #subb <- suba[suba[,1]*suba[,2]>0,]
+    #suba <- suba[suba$scaler>0,]
+    
+    if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){
+      #print(1)
+      #if(cor.test(suba[,c(1,2)])$)
+      ktest <- cor.test(subb[,1], subb[,2])
+      #print(ktest$p.value)
+      #if(ktest$p.value<0.05){
+      k <- cor(subb[,c(1,2)])[1,2]*scaler
+      #k <- k/abs(k)
+      m <- cor(suba[,c(1,2)])[1,2]
+      #}
+      #else{
+      #  k <- 0
+      #  m <- 0
+      #}
+      #k <- sum(k)
+      #l <- sum(suba$scaler)
+      l <- suba$scaler
+      
+      #m <- sum(suba$scaler)
+      sid <- cbind(sid, suba$scaler)
+      pid <- cbind(pid,k)
+      ss <- append(ss,k)
+      nn <- append(nn,l)
+      zz <- append(zz,m)
+    }
+    #else{
+    #  k <- 0
+    #  l <- sum(suba$scaler)
+      
+    #  ss[length(ss)+1] <- k
+    #  nn[length(nn)+1] <- l
+    #}
+  }
+}
+"pid <- as.data.frame(pid)
+
+if(ncol(pid) ==2){
+  mean(pid[,2])
+}
+if(ncol(pid) > 2){
+rowspid <- rowSums(pid[,2:ncol(pid)])
+print(mean(rowspid))
+rowssid <- rowSums(sid[,2:ncol(sid)])
+
+print(sum(rowspid)/sum(rowssid))
+#rowspid <- apply(pid[,2:ncol(pid)], 1, function(x) median(x, na.rm = T))
+
+print(mean(rowspid, na.rm = T))
+print(std.error(rowspid, na.rm = T))
+
+
+
+
+}
+"
+
+#sqrt(weighted_se(ss/nn,nn,na.rm = T))
+
+sum(ss)/length(nn[nn>0])
+
+sum(ss)
+mean(zz)
+sum(zz)
+mean(ss)
+
+length(ss[ss<0])/length(ss)
+
+suppressWarnings({(sum(pcor(tsub)$estimate) - ncol(tsub))/(ncol(tsub) * (ncol(tsub)-1))})
+
+```
+
+```{R}
+thred <- 180
+
+```
+
+```{r}
+library(reshape2)
+tt <- reshape2::dcast(trees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+
+```
+
+
+
+
+```{R}
+
+assosimplefun <- function(tsub){
+
+  if(ncol(tsub)<2){
+    return(-888)
+  }
+  else{
+  
+  tsub <- tsub[,colSums(tsub != 0)>0]
+  
+  ss <- c()
+  nn <- c()
+
+  #print(unique(df$random))
+for(i in 1:(ncol(tsub)-1)){
+  for(j in (i+1):ncol(tsub)){
+    suba <- tsub[,c(i,j)]
+    
+    scaler <- log1p(sum(suba[,1])*sum(suba[,2])) # summing up grid cell level abundance and use the logged value as the weigh. 
+    #subb <- suba[suba[,1]*suba[,2]>0,]
+    subb <- suba[rowSums(suba[])>0,] # remove the pairs with double zero. 
+    #suba <- suba[suba$scaler>0,]
+    if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of value. 
+      
+      #ktest <- cor.test(subb[,1],subb[,2]) # Test if the correlation significant or not, p value will be provided. 
+      
+      #if(ktest$p.value < 0.05){ 
+      k <- cor(subb[,c(1,2)])[1,2]
+      ss <- append(ss,k) # a list of correlations is created.
+      
+    }
+    
+  }
+}
+
+  
+  if(length(ss)>0 ){
+    return(mean(ss)) # The mean of the regional will be returned. 
+  }
+  else{
+    return(-999)
+  }
+  }
+  }
+
+
+```
+
+
+```{R}
+
+assosimplegenfun <- function(df){
+
+  #print(unique(df$random))
+  
+  ss <- c()
+  nn <- c()
+
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else {
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  if(nrow(subtrees) == 0){
+    return(-999)
+  }else{
+    
+    specieslist = unique(subtrees$SPCD)
+    if(length(specieslist)<2){
+      return(-999)
+    }else{
+    
+    for(i in 1:(length(specieslist)-1)){
+      for(j in i:length(specieslist)){
+        
+        a = as.character(specieslist[i])
+        b = as.character(specieslist[j])
+        
+        suba <- tt[,c(a,b)]
+        subb <- suba[rowSums(suba[])>0,]
+        
+        if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of value. 
+      
+      #ktest <- cor.test(subb[,1],subb[,2]) # Test if the correlation significant or not, p value will be provided. 
+      
+      #if(ktest$p.value < 0.05){ 
+      k <- cor(subb[,c(1,2)])[1,2]
+      ss <- append(ss,k) # a list of correlations is created.
+      
+    }
+        
+        
+      }
+    }
+    
+    if(length(ss)>0 ){
+    return(mean(ss)) # The mean of the regional will be returned. 
+  }
+  else{
+    return(-999)
+  }}
+    
+    
+    
+  #print(unique(df$random))
+
+  }
+}}
+
+```
+
+
+
+```{R}
+
+assosimplespearfun <- function(tsub){
+
+  if(ncol(tsub)<2){
+    return(-888)
+  }
+  else{
+  
+  tsub <- tsub[,colSums(tsub != 0)>0]
+  
+  ss <- c()
+  nn <- c()
+
+  #print(unique(df$random))
+for(i in 1:(ncol(tsub)-1)){
+  for(j in (i+1):ncol(tsub)){
+    suba <- tsub[,c(i,j)]
+    
+    scaler <- log1p(sum(suba[,1])*sum(suba[,2])) # summing up grid cell level abundance and use the logged value as the weigh. 
+    #subb <- suba[suba[,1]*suba[,2]>0,]
+    subb <- suba[rowSums(suba[])>0,] # remove the pairs with double zero. 
+    #suba <- suba[suba$scaler>0,]
+    if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of value. 
+      
+      #ktest <- cor.test(subb[,1],subb[,2]) # Test if the correlation significant or not, p value will be provided. 
+      
+      #if(ktest$p.value < 0.05){ 
+      k <- cor(subb[,c(1,2)],method = 'spearman')[1,2]
+      ss <- append(ss,k) # a list of correlations is created.
+      
+    }
+    
+  }
+}
+
+  
+  if(length(ss)>0 ){
+    return(mean(ss)) # The mean of the regional will be returned. 
+  }
+  else{
+    return(-999)
+  }
+  }
+  }
+
+
+```
+
+
+
+
+```{R}
+
+calcassociationsimple <- function(df) {
+  
+  #print(unique(df$random))
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else {
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  if(nrow(subtrees) == 0){
+    return(-999)
+  }else{
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  
+  if(nrow(tsub)<=thred){
+    return(assosimplefun(tsub))
+  } else{
+    alllist <- c()
+    for (i in 1:10) {
+      set.seed(i)
+      subt <- tsub %>%
+        sample_n(size = thred)
+      subt <- subt[rowSums(subt[])>0,]
+      subt <- subt[,colSums(subt != 0)>0]
+      
+      asso <- assosimplefun(subt)
+      alllist <- append(alllist, asso)
+      
+      
+    }
+    alllist <- alllist[alllist > -888]
+      return(mean(alllist))
+  }
+  
+  }
+}}
+
+
+```
+
+
+```{R}
+
+calcassociationsimplespear <- function(df) {
+  
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else {
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  if(nrow(subtrees) == 0){
+    return(-999)
+  }else{
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  
+  if(nrow(tsub)<=thred){
+    return(assosimplespearfun(tsub))
+  } else{
+    alllist <- c()
+    for (i in 1:10) {
+      set.seed(i)
+      subt <- tsub %>%
+        sample_n(size = thred)
+      subt <- subt[rowSums(subt[])>0,]
+      subt <- subt[,colSums(subt != 0)>0]
+      
+      asso <- assosimplespearfun(subt)
+      alllist <- append(alllist, asso)
+      
+      
+    }
+    alllist <- alllist[alllist > -888]
+      return(mean(alllist))
+  }
+  
+  }
+}}
+
+
+```
+
+```{R}
+
+partialfun <- function(tsub){
+  if(!is.null(ncol(tsub))){
+  if(ncol(tsub)<2){
+    return(-888)
+  }
+  else{
+  tsub <- tsub[,colSums(tsub != 0)>0]
+  tsub <- tsub[rowSums(tsub[])>0,]
+  if(nrow(tsub) > 2){
+    if(det(cov(tsub))<1e-6){
+      return(0)
+    }else{
+  suppressWarnings({cormatrix <- ppcor::pcor(tsub)$estimate # get the partial correlation matrix
+  
+  lowtriangle <- sum(cormatrix)-ncol(tsub) # get the sum of the lower triangle
+  meanpartial <- lowtriangle/(ncol(tsub) * (ncol(tsub)-1)) # get the mean
+
+  return(meanpartial)})}
+  }else{
+    return(-999)
+  }
+  }}
+  else(return(-999))
+}
+
+```
+
+
+
+```{R}
+library(ppcor)
+library(knitr)
+
+calcassociationpartial <- function(df) {
+  #print(unique(df$random))
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  
+  #tsub <- tsub[, sapply(tsub, function(col) length(unique(col))) > 1]
+  if(ncol(tsub)>=2){
+  #tsub <- tsub[, sapply(tsub, function(col) length(unique(col))) > 2]
+    tsub <- tsub[rowSums(tsub[])>0,]
+  
+    return(partialfun(tsub))
+  }else{
+    return(-999)
+  }
+  
+  }
+  
+  }
+
+```
+
+
+
+```{R}
+
+pvaluefun <- function(tsub){
+  
+  if(ncol(tsub)<2){
+    return(-888)
+  }
+  else{
+  
+  tsub <- tsub[,colSums(tsub != 0)>0]
+  
+  ss <- c()
+  nn <- c()
+
+  #print(unique(df$random))
+  
+  for(i in 1:(ncol(tsub)-1)){
+    for(j in (i+1):ncol(tsub)){
+      suba <- tsub[,c(i,j)]
+    
+      scaler <- log1p(sum(suba[,1])*sum(suba[,2])) # summing up grid cell level abundance and use the logged value as the weigh. 
+      #subb <- suba[suba[,1]*suba[,2]>0,]
+      subb <- suba[rowSums(suba[])>0,] # remove the pairs with double zero. 
+      #suba <- suba[suba$scaler>0,]
+      if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of value. 
+      
+        k <- cor(subb[,c(1,2)])[1,2]
+        ss <- append(ss,k) # a list of correlations is created. 
+     
+    }
+  
+  }
+}
+        return(ss)
+  }
+}
+
+```
+
+
+```{R}
+
+sigfun <- function(tsub){
+  
+  if(ncol(tsub)<2){
+    return(-888)
+  }
+  else{
+  
+  tsub <- tsub[,colSums(tsub != 0)>0]
+  
+  ss <- c()
+  nn <- c()
+
+  #print(unique(df$random))
+  
+  for(i in 1:(ncol(tsub)-1)){
+    for(j in (i+1):ncol(tsub)){
+      suba <- tsub[,c(i,j)]
+    
+      scaler <- log1p(sum(suba[,1])*sum(suba[,2])) # summing up grid cell level abundance and use the logged value as the weigh. 
+      #subb <- suba[suba[,1]*suba[,2]>0,]
+      subb <- suba[rowSums(suba[])>0,] # remove the pairs with double zero. 
+      #suba <- suba[suba$scaler>0,]
+      if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of value. 
+      
+        k <- cor.test(subb[,1], subb[,2])$p.value
+        ss <- append(ss,k) # a list of correlations is created. 
+     
+    }
+  
+  }
+}
+        return(ss)
+  }
+}
+
+```
+
+
+```{R}
+
+sigfunspear <- function(tsub){
+  
+  if(ncol(tsub)<2){
+    return(-888)
+  }
+  else{
+  
+  tsub <- tsub[,colSums(tsub != 0)>0]
+  
+  ss <- c()
+  nn <- c()
+
+  #print(unique(df$random))
+  
+  for(i in 1:(ncol(tsub)-1)){
+    for(j in (i+1):ncol(tsub)){
+      suba <- tsub[,c(i,j)]
+    
+      scaler <- log1p(sum(suba[,1])*sum(suba[,2])) # summing up grid cell level abundance and use the logged value as the weigh. 
+      #subb <- suba[suba[,1]*suba[,2]>0,]
+      subb <- suba[rowSums(suba[])>0,] # remove the pairs with double zero. 
+      #suba <- suba[suba$scaler>0,]
+      if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){ # there must be at least 3 levels of value. 
+      
+        k <- cor.test(subb[,1], subb[,2], method = 'spearman', exact = F)$p.value
+        ss <- append(ss,k) # a list of correlations is created. 
+     
+    }
+  
+  }
+}
+        return(ss)
+  }
+}
+
+```
+
+
+```{R}
+
+
+assop <- function(df) {
+  #print(unique(df$random))
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  if(nrow(tsub)<=thred){
+  
+  ss <- sigfun(tsub)
+  ss <- ss[ss>=0]
+  if(length(ss)>2){
+  return(length(ss[ss<0.05])/length(ss))
+  }else{
+    return(999)
+  }
+  }
+  if(nrow(tsub)>thred){
+    
+    allp <- c()
+    for(i in 1:10){
+      set.seed(i)
+      subt <- tsub %>%
+        sample_n(size = thred)
+      ss <- sigfun(subt)
+      ss <- ss[ss>=0]
+      if(length(ss)>2){
+      allp <- append(allp,length(ss[ss<0.05])/length(ss))
+      }else{
+        allp <- append(allp,999)
+      }
+    }
+    #ss <- as.data.frame(ss)
+    allp <- allp[allp<=1]
+    return(mean(allp))
+  }
+  }}
+
+
+```
+
+```{R}
+
+
+assopspear <- function(df) {
+  #print(unique(df$random))
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  if(nrow(tsub)<=thred){
+  
+  ss <- sigfunspear(tsub)
+  ss <- ss[ss>=0]
+  if(length(ss)>2){
+  return(length(ss[ss<0.05])/length(ss))
+  }else{
+    return(999)
+  }
+  }
+  if(nrow(tsub)>thred){
+    
+    allp <- c()
+    for(i in 1:10){
+      set.seed(i)
+      subt <- tsub %>%
+        sample_n(size = thred)
+      ss <- sigfunspear(subt)
+      ss <- ss[ss>=0]
+      if(length(ss)>2){
+      allp <- append(allp,length(ss[ss<0.05])/length(ss))
+      }else{
+        allp <- append(allp,999)
+      }
+    }
+    #ss <- as.data.frame(ss)
+    allp <- allp[allp<=1]
+    return(mean(allp))
+  }
+  }}
+
+
+```
+
+
+```{R}
+
+
+calcassociationnormpvalue <- function(df) {
+  
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  if(nrow(tsub)<=thred){
+  
+  ss <- pvaluefun(tsub)
+  ss <- ss[ss>=0]
+  if(length(ss)>2){
+  return(shapiro.test(ss)$p.value)
+  }else{
+    return(999)
+  }
+  }
+  if(nrow(tsub)>thred){
+    
+    allp <- c()
+    for(i in 1:10){
+      set.seed(i)
+      subt <- tsub %>%
+        sample_n(size = thred)
+      ss <- pvaluefun(subt)
+      ss <- ss[ss>-555]
+      if(length(ss)>2){
+      allp <- append(allp,shapiro.test(ss)$p.value)
+      }else{
+        allp <- append(allp,999)
+      }
+    }
+    #ss <- as.data.frame(ss)
+    allp <- allp[allp<=1]
+    return(mean(allp))
+  }
+  }}
+
+
+```
+
+
+
+```{R}
+
+
+calcassociationpvalue <- function(df) {
+  
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  if(nrow(subtrees) == 0){
+    return(-999)
+  }else{
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  if(nrow(tsub)<=thred){
+  
+  ss <- pvaluefun(tsub)
+  ss <- ss[ss>-555]
+  if(length(ss)>2){
+    if(sd(ss) == 0){
+      return(1)
+    }else{
+  return(t.test(ss)$p.value)
+    }
+  }else{
+    return(999)
+  }
+  }
+  if(nrow(tsub)>thred){
+    
+    allp <- c()
+    for(i in 1:10){
+      set.seed(i)
+      subt <- tsub %>%
+        sample_n(size = thred)
+      ss <- pvaluefun(subt)
+      ss <- ss[ss>-555]
+      if(length(ss)>2){
+        if(sd(ss) == 0){
+          allp <- append(allp,1)
+        }else{
+      allp <- append(allp,t.test(ss)$p.value)
+        }
+      }else{
+        allp <- append(allp,999)
+      }
+    }
+    #ss <- as.data.frame(ss)
+    allp <- allp[allp<=1]
+    return(mean(allp))
+  }
+  }}}
+
+
+```
+
+
+
+
+```{R}
+
+calcassociation <- function(df) {
+  
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  if(ncol(tsub)<2){
+    return(-888)
+  }
+  else{
+  
+  tsub <- tsub[,colSums(tsub != 0)>0]
+  
+  ss <- c()
+  nn <- c()
+
+  #print(unique(df$random))
+for(i in 1:(ncol(tsub)-1)){
+  for(j in (i+1):ncol(tsub)){
+    suba <- tsub[,c(i,j)]
+    
+    suba$scaler <- log1p(suba[,1]*suba[,2])
+    #subb <- suba[suba[,1]*suba[,2]>0,]
+    subb <- suba[rowSums(suba[])>0,]
+    #suba <- suba[suba$scaler>0,]
+    if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){
+      
+      ktest <- cor.test(subb[,1],subb[,2])
+      
+      if(ktest$p.value < 0.05){
+      k <- cor(subb[,c(1,2)])[1,2]*(suba$scaler)}
+      else{
+        k <- 0*suba$scaler
+      }
+      #l <- sum(suba$scaler)
+      l <- suba$scaler
+      
+      m <- sum(suba$scaler)
+      #}
+      #else{
+      #  k = 0
+      #  l <- suba$scaler
+      #}
+      
+      ss <- append(ss,k)
+      nn <- append(nn,l)
+      pid <- cbind(pid,k)
+    }
+    #else{
+    #  k <- 0
+    #  l <- sum(suba$scaler)
+      
+    #  ss[length(ss)+1] <- k
+    #  nn[length(nn)+1] <- l
+    #}
+  }
+}
+
+  
+  if(length(ss)>0 & sum(ss)!=0){
+    pid <- as.data.frame(pid)
+    if(ncol(pid)>2){
+    rowspid <- rowSums(pid[,2:ncol(pid)])
+    return(mean(rowspid))
+    }
+    if(ncol(pid) == 2){
+      return(mean(pid[,2]))
+    }
+    if(ncol(pid) < 2){
+      return(-999)
+    }
+  #return(sum(ss)/length(nn[nn>0]))
+  }
+  else{
+    return(-999)
+  }
+  }
+  }
+}
+
+
+```
+
+
+```{R}
+
+calcassociation2 <- function(df) {
+  
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  tsub <- dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  sid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  if(ncol(tsub)<2){
+    return(-888)
+  }
+  else{
+  
+  tsub <- tsub[,colSums(tsub != 0)>0]
+  
+  ss <- c()
+  nn <- c()
+
+  #print(unique(df$random))
+for(i in 1:(ncol(tsub)-1)){
+  for(j in (i+1):ncol(tsub)){
+    suba <- tsub[,c(i,j)]
+    
+    suba$scaler <- log1p(suba[,1]*suba[,2])
+    #subb <- suba[suba[,1]*suba[,2]>0,]
+    subb <- suba[rowSums(suba[])>0,]
+    #suba <- suba[suba$scaler>0,]
+    if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){
+      ktest <- cor.test(subb[,1],subb[,2])
+     if(ktest$p.value < 0.05){
+      
+      k <- cor(subb[,c(1,2)])[1,2]*(suba$scaler)}
+      #}
+      #else{
+      #  k = 0
+      #}
+      #l <- sum(suba$scaler)
+      l <- suba$scaler
+      
+      m <- sum(suba$scaler)
+      
+      ss <- append(ss,k)
+      nn <- append(nn,l)
+      pid <- cbind(pid,k)
+      sid <- cbind(sid,suba$scaler)
+    }
+    #else{
+    #  k <- 0
+    #  l <- sum(suba$scaler)
+      
+    #  ss[length(ss)+1] <- k
+    #  nn[length(nn)+1] <- l
+    #}
+  }
+}
+
+  
+#  if(length(ss)>0 & sum(ss)!=0){
+    pid <- as.data.frame(pid)
+    if(ncol(pid)>2){
+      rowspid <- rowSums(pid[,2:ncol(pid)])
+      #rowssid <- rowSums(sid[,2:ncol(sid)])
+      #return(sum(rowspid)/sum(rowssid))
+    rowspid <- apply(pid[,2:ncol(pid)], 1, function(x) median(x))
+    return(mean(rowspid, na.rm = T))
+    }
+    if(ncol(pid) == 2){
+      return(mean(pid[,2]))
+    }
+    if(ncol(pid) < 2){
+      return(-999)
+    }
+  #return(sum(ss)/length(nn[nn>0]))
+  }
+  #else{
+  #  return(-999)
+  #}
+  }
+  }
+
+
+
+```
+
+
+```{R}
+associationnegprop <- function(df){
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  if(ncol(tsub)<2){
+    return(-888)
+  }
+  else{
+  
+  tsub <- tsub[,colSums(tsub != 0)>0]
+  
+  ss <- c()
+  nn <- c()
+
+  #print(unique(df$random))
+for(i in 1:(ncol(tsub)-1)){
+  for(j in (i+1):ncol(tsub)){
+    suba <- tsub[,c(i,j)]
+    
+    suba$scaler <- log1p(suba[,1]*suba[,2])
+    #subb <- suba[suba[,1]*suba[,2]>0,]
+    subb <- suba[rowSums(suba[])>0,]
+    if(length(unique(subb[,1]))>2 & length(unique(subb[,2]))>2){
+      
+      ktest <- cor.test(subb[,1],subb[,2])
+      if(ktest$p.value<0.05){
+      k <- cor(subb[,c(1,2)])[1,2]}
+      else{
+        k <- 0
+      }
+      #if(k!=0){
+      #k <- k/abs(k)
+      #}
+      #else{
+      #  k <- k
+      #}
+      #l <- sum(suba$scaler)
+      l <- suba$scaler
+      
+      m <- sum(suba$scaler)
+      
+      ss <- append(ss,k)
+      nn <- append(nn,l)
+      
+    }
+    #else{
+    #  k <- 0
+    #  l <- sum(suba$scaler)
+      
+    #  ss[length(ss)+1] <- k
+    #  nn[length(nn)+1] <- l
+    #}
+  }
+}
+
+  
+  if(length(ss)>0 & sum(ss)!=0){
+  return(length(ss[ss<0])/length(ss))
+  }
+  else{
+    return(-999)
+  }
+  }
+  }
+  
+}
+
+```
+
+
+
+```{r}
+library(plotrix)
+
+associationsr <- function(df) {
+  #print(unique(df$random))
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  if(nrow(subtrees) == 0){
+    return(-999)
+  }else{
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  if(nrow(tsub)<=thred){
+    ss <- pvaluefun(tsub)
+    ss <- ss[ss>-555]
+    if(length(ss)>2){
+      return(std.error(ss))
+    }else{
+      return(-999)
+    }
+  }else{
+  allsr <- c()
+  for(i in 1:10){
+    set.seed(i)
+    subt <- tsub %>%
+      sample_n(size = thred)
+    ss <- pvaluefun(subt)
+    if(length(ss)>2){
+      allsr <- append(allsr,std.error(ss))
+    }else{
+     allsr <- append(allsr, -999)
+    }
+  }
+  allsr <- allsr[allsr>-999]
+  
+  if(length(allsr)>0){
+    return(median(allsr))
+  }else{
+    return(-999)
+  }
+}
+  
+ 
+  }
+}}
+
+```
+```{r}
+library(plotrix)
+
+associationspearsr <- function(df) {
+  #print(unique(df$random))
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+  pid <- tsub$PLT_CN
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  
+  if(nrow(tsub)<=thred){
+    ss <- assosimplespearfun(tsub)
+    ss <- ss[ss>-555]
+    if(length(ss)>2){
+      return(std.error(ss))
+    }else{
+      return(-999)
+    }
+  }else{
+  allsr <- c()
+  for(i in 1:10){
+    set.seed(i)
+    subt <- tsub %>%
+      sample_n(size = thred)
+    ss <- assosimplespearfun(subt)
+    if(length(ss)>2){
+      allsr <- append(allsr,std.error(ss))
+    }else{
+     allsr <- append(allsr, -999)
+    }
+  }
+  allsr <- allsr[allsr>-999]
+  
+  if(length(allsr)>0){
+    return(median(allsr))
+  }else{
+    return(-999)
+  }
+}
+  
+ 
+  }
+}
+
+```
+
+
+
+```{R}
+
+richfun <- function(tsub){
+  
+  if(!is.null(ncol(tsub))){
+  
+  if (ncol(tsub)<1) {
+    return(-888)
+  }else{
+    return(ncol(tsub))
+  }
+  }else{
+    return(-999)
+  }
+}
+
+```
+
+
+
+
+```{r}
+regionalrichness <- function(df) {
+  #print(unique(df$random))
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  if(nrow(subtrees) == 0){
+    return(-999)
+  }else{
+  tsub <- reshape2::dcast(subtrees[,c('SPCD', 'PLT_CN')], PLT_CN~SPCD, length, value.var = 'SPCD')
+
+  tsub <- tsub %>%
+  column_to_rownames(var = 'PLT_CN')
+  if(ncol(tsub) == 1){
+    return(1)
+  }else{
+  tsub <- tsub[rowSums(tsub[])>0,]
+  tsub <- tsub[,colSums(tsub != 0) > 0]
+  
+  #tsub <- tsub[,colSums(tsub != 0)>0]
+  if(nrow(tsub)<=thred){
+    return(richfun(tsub))
+  }else{
+    alllist <- c()
+    for (i in 1:10) {
+      set.seed(i)
+      subt <- tsub %>%
+        sample_n(size = thred)
+      subt <- subt[rowSums(subt[])>0,]
+      subt <- subt[,colSums(subt != 0) > 0]
+      rich <- richfun(subt)
+      alllist <- append(alllist, rich)
+    }
+    alllist <- alllist[alllist>-555]
+    return(mean(alllist))
+  }}}
+  
+  
+  
+  }
+  
+}
+
+```
+
+
+```{r}
+regionalheight <- function(df){
+  #print(unique(df$random))
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  subtrees <- subtrees[complete.cases(subtrees$ht_m),]
+  plts <- unique(subtrees$PLT_CN)
+  
+  if(nrow(subtrees) == 0){
+    return(-999)
+  }else{
+    if(length(plts)<=thred){
+      
+      
+    htdf = subtrees %>%
+      dplyr::group_by(PLT_CN)%>%
+      dplyr::summarise(
+        maxht = max(ht_m,na.rm = T)
+      )%>%
+      ungroup()
+    return(mean(htdf$maxht, na.rm = TRUE))
+  }else{
+    alllist <- c()
+    for (i in 1:10) {
+      set.seed(i)
+      subp = plts[sample(1:length(plts),thred)]
+      subtree <- subtrees %>%
+        filter(PLT_CN %in% subp)
+      htdf = subtree %>%
+        dplyr::group_by(PLT_CN)%>%
+        dplyr::summarise(
+          maxht = max(ht_m, na.rm = TRUE)
+        )%>%
+        ungroup()
+      alllist <- append(alllist,mean(htdf$maxht, na.rm = TRUE))
+    }
+    alllist <- alllist[alllist>-555]
+    return(mean(alllist))
+  }
+    
+    
+    
+  }
+  }}
+
+```
+
+```{r}
+regionalheightstd <- function(df){
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  subtrees <- subtrees[complete.cases(subtrees$ht_m),]
+  plts <- unique(subtrees$PLT_CN)
+  if(nrow(subtrees) == 0){
+    return(-999)
+  }else{
+    if(length(plts)<=thred){
+    htdf = subtrees %>%
+      dplyr::group_by(PLT_CN)%>%
+      dplyr::summarise(
+        maxht = max(ht_m,na.rm = T)
+      )%>%
+      ungroup()
+    return(sd(htdf$maxht, na.rm = TRUE))
+  }else{
+    alllist <- c()
+    for (i in 1:10) {
+      set.seed(i)
+      subp = plts[sample(1:length(plts),thred)]
+      
+      subtree <- trees %>%
+        filter(PLT_CN %in% subp)
+      htdf = subtree %>%
+        dplyr::group_by(PLT_CN)%>%
+        dplyr::summarise(
+          maxht = max(ht_m, na.rm = TRUE)
+        )%>%
+        ungroup()
+      alllist <- append(alllist,sd(htdf$maxht, na.rm = TRUE))
+    }
+    alllist <- alllist[alllist>-555]
+    return(mean(alllist))
+  }
+    
+    
+    
+  }
+  }}
+
+```
+
+```{R}
+
+regionaldensity <- function(df){
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  plotleveldf <- subtrees %>%
+    group_by(PLT_CN) %>%
+    dplyr::summarise(
+      totaldensity = sum(pi*dbh_cm*dbh_cm)/672/4/10000
+    ) %>%
+    ungroup()
+  
+  return(mean(plotleveldf$totaldensity))
+}
+
+
+```
+
+
+```{r}
+
+regionaldensitysr <- function(df){
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  
+  plotleveldf <- subtrees %>%
+    group_by(PLT_CN) %>%
+    dplyr::summarise(
+      totaldensity = sum(pi*dbh_cm*dbh_cm)/672/4/10000
+    ) %>%
+    ungroup()
+  
+  return(sd(plotleveldf$totaldensity))
+}
+
+```
+
+```{R}
+library(rlang)
+
+regionalmean <- function(df, variable){
+  varname = substitute(variable)
+  if(nrow(df)<3){
+    return(-99999)
+  } else if(nrow(df)<thred) {
+    bb <- get(variable, df)
+    return(mean(bb))
+  }else{
+    alllist <- c()
+    for(i in 1:10){
+      set.seed(i)
+      subdf <- df %>%
+        sample_n(size = thred)
+      bb <- get(variable, df)
+      ss <- mean(bb,na.rm = TRUE)
+      alllist <- append(alllist,ss)
+    }
+    return(mean(alllist))
+  }
+    
+}
+
+
+regionalstd <- function(df, variable){
+  if(nrow(df)<3){
+    return(-99999)
+  } else if(nrow(df)<thred) {
+    bb <- get(variable, df)
+    return(sd(bb))
+  }else{
+    alllist <- c()
+    for(i in 1:10){
+      set.seed(i)
+      subdf <- df %>%
+        sample_n(size = thred)
+      bb <- get(variable, df)
+      ss <- sd(bb, na.rm = FALSE)
+      alllist <- append(alllist,ss)
+    }
+    return(mean(alllist))
+  }
+    
+}
+
+
+
+
+
+```
+```{r}
+standba <- function(df){
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  subtrees <- subtrees %>%
+    dplyr::mutate(
+      baindi = (dbh*dbh*tph)/(40000*pi)
+    )
+  plotdf <- subtrees %>%
+    group_by(PLT_CN)%>%
+    dplyr::summarise(
+      totalba = sum(baindi)
+    )%>%
+    ungroup()
+  
+  return(mean(plotdf$totalba))
+  
+  }
+
+
+```
+
+```{r}
+regionalba <- function(df) {
+  #print(unique(df$random))
+  if(nrow(df)<3){
+    return(-999)
+  }
+  else{
+    
+    if(nrow(df)<=thred){
+      return(standba(df))
+  }else{
+    alllist <- c()
+    for (i in 1:10) {
+      set.seed(i)
+      subt <- df %>%
+        sample_n(size = thred)
+      #subt <- subt[rowSums(subt[])>0,]
+      #subt <- subt[,colSums(subt != 0) > 0]
+      ba <- standba(subt)
+      alllist <- append(alllist, ba)
+    }
+    alllist <- alllist[alllist>-555]
+    return(mean(alllist))
+  }}
+  
+  
+  
+  }
+  
+
+
+```
+
+
+```{r}
+
+balfun <- function(df){
+  
+  df <- df[order(df$baindi),]
+  
+  bas <-0
+  for(i in 1:nrow(df)){
+    bas <- bas + df[i,'baindi']*(i-1)
+  }
+  
+  return(bas)
+}
+
+```
+
+
+```{R}
+
+regionalbal <- function(df){
+  
+  if(nrow(df)<3){
+    return(-999)
+  }else{
+    if(nrow(df)<=thred){
+  
+  subtrees <- trees %>%
+    filter(PLT_CN %in% unique(df$PLT_CN))
+  subtrees <- subtrees %>%
+    mutate(
+      baindi = (dbh*dbh*tph)/(40000*pi)
+    )
+  
+  plotdf <- subtrees %>%
+    dplyr::group_by(PLT_CN)%>%
+    dplyr::summarise(
+      plotbal = balfun(.)
+    )%>%
+    ungroup()
+  
+  return(mean(plotdf$plotbal))
+  
+    }
+    else{
+      alllist <- c()
+    for (i in 1:10) {
+      set.seed(i)
+      subt <- df %>%
+        sample_n(size = thred)
+      
+      subtrees <- trees %>%
+        filter(PLT_CN %in% unique(subt$PLT_CN))
+      subtrees <- subtrees %>%
+    mutate(
+      baindi = (dbh*dbh*tph)/(40000*pi)
+    )
+      
+      plotdf <- subtrees %>%
+        dplyr::group_by(PLT_CN)%>%
+        dplyr::summarise(
+          plotbal = balfun(.)
+        )%>%
+        ungroup()
+      alllist <- append(alllist, mean(plotdf$plotbal))
+    }
+      return(mean(alllist))
+  }
+  }
+}
+
+
+
+```
+
+
+
+
+```{R}
+
+library(doParallel)
+detectCores()
+
+```
+
+
+```{R}
+#library(multidplyr)
+#clusters <- new_cluster(8)
+#cluster_library(clusters, c('dplyr', 'ggplot2', 'ppcor', 'knitr', 'plotrix', 'tidyverse'))
+
+#cluster_copy(clusters, 'calcassociationsimple')
+#cluster_copy(clusters, 'calcassociationpartial')
+#cluster_copy(clusters, 'calcassociationnormpvalue')
+#cluster_copy(clusters, 'calcassociationpvalue')
+#cluster_copy(clusters, 'associationsr')
+#cluster_copy(clusters, 'regionalrichness')
+#cluster_copy(clusters, 'richfun')
+#cluster_copy(clusters, 'pvaluefun')
+#cluster_copy(clusters, 'partialfun')
+#cluster_copy(clusters, 'assosimplefun')
+#cluster_copy(clusters, 'trees')
+#cluster_copy(clusters, 'thred')
+#cluster_copy(clusters, 'tidyverse')
+
+```
+
+
+```{R}
+#set.seed(0)
+#sample1 <- regionalplt %>%
+#  filter(random %in% gridlist[1:1000])%>%
+#  partition(clusters)%>%
+#  group_by(random)
+
+```
+
+```{r}
+regionalplt %>%
+  ggplot(., aes(x = WDPA))+
+  geom_histogram()
+```
+
+
+
+```{R}
+
+subregional <- regionalplt %>%
+  filter(Human_Disturbance < 0.01 | WDPA == 1 )
+
+#subregional <- regionalplt
+
+```
+
+
+
+
+
+```{r} 
+
+
+
+gridassociation <- subregional %>%
+  #filter(random %in% gridlist[1:50]) %>%
+  group_by(random) %>%
+  do(data.frame(#association = calcassociation(.),
+                associationsimple = calcassociationsimple(.),
+                #associationsimplespear = calcassociationsimplespear(.),
+                #assogen = assosimplegenfun(.)
+                #assosimplep = assop(.),
+                #assospearp = assopspear(.),
+                #regionalba = regionalba(.),
+                #regionalbal = regionalbal(.),
+                #associationpartial = calcassociationpartial(.),
+                #associationnormpvalue = calcassociationnormpvalue(.),
+                associationpvalue = calcassociationpvalue(.),
+                #association2 = calcassociation2(.),
+                associationsr = associationsr(.),
+                #assciationspearsr = associationspearsr(.),
+                #associationneg = associationnegprop(.),
+                regionalrichness = regionalrichness(.),
+                CHELSA_Annual_Mean_Temperature_mean = regionalmean(.,'CHELSA_Annual_Mean_Temperature'),
+                #CHELSA_Annual_Mean_Temperature_mean = mean(CHELSA_Annual_Mean_Temperature),
+            CHELSA_Annual_Mean_Temperature_std = regionalstd(.,'CHELSA_Annual_Mean_Temperature'),
+            CHELSA_Annual_Precipitation_mean = regionalmean(.,'CHELSA_Annual_Precipitation'),
+            CHELSA_Annual_Precipitation_std = regionalstd(.,'CHELSA_Annual_Precipitation'),
+            #CHELSA_Mean_Temperature_of_Coldest_Quarter_mean = regionalmean(.,'CHELSA_Mean_Temperature_of_Coldest_Quarter'),
+            #CHELSA_Mean_Temperature_of_Coldest_Quarter_std = regionalstd(.,'CHELSA_Mean_Temperature_of_Coldest_Quarter'),
+            #CHELSA_Precipitation_of_Driest_Quarter_mean = regionalmean(.,'CHELSA_Precipitation_of_Driest_Quarter'),
+            #CHELSA_Precipitation_of_Driest_Quarter_std = regionalstd(.,'CHELSA_Precipitation_of_Driest_Quarter'),
+            CHELSA_Isothermality_mean = regionalmean(.,'CHELSA_Isothermality'),
+            CHELSA_Isothermality_std = regionalstd(.,'CHELSA_Isothermality'),
+            ##CHELSA_Precipitation_of_Driest_Quarter_mean = regionalmean(.,'CHELSA_Precipitation_of_Driest_Quarter'),
+            #CHELSA_Precipitation_of_Driest_Quarter_std = regionalstd(.,'CHELSA_Precipitation_of_Driest_Quarter'),
+            CHELSA_Temperature_Annual_Range_mean = regionalmean(.,'CHELSA_Temperature_Annual_Range'),
+            CHELSA_Temperature_Annual_Range_std = regionalstd(.,'CHELSA_Temperature_Annual_Range'),
+            #EarthEnvTopoMed_Elevation_mean = regionalmean(.,'EarthEnvTopoMed_Elevation'),
+            #EarthEnvTopoMed_Elevation_std = regionalstd(.,'EarthEnvTopoMed_Elevation'),
+            #EarthEnvTopoMed_Slope_mean = regionalmean(.,'EarthEnvTopoMed_Slope'),
+            #EarthEnvTopoMed_Slope_std = regionalstd(.,'EarthEnvTopoMed_Slope'),
+            #EarthEnvTopoMed_Roughness_mean = regionalmean(.,'EarthEnvTopoMed_Roughness'),
+            #EarthEnvTopoMed_Roughness_std = regionalstd(.,'EarthEnvTopoMed_Roughness'),
+            SG_Sand_Content_0_100cm_mean = regionalmean(.,'SG_Sand_Content_0_100cm'),
+            SG_Sand_Content_0_100cm_std = regionalstd(.,'SG_Sand_Content_0_100cm'),
+            SG_Clay_Content_0_100cm_mean = regionalmean(.,'SG_Clay_Content_0_100cm'),
+            SG_Clay_Content_0_100cm_std = regionalstd(.,'SG_Clay_Content_0_100cm'),
+            SG_Silt_Content_0_100cm_mean = regionalmean(.,'SG_Silt_Content_0_100cm'),
+            SG_Silt_Content_0_100cm_std = regionalstd(.,'SG_Silt_Content_0_100cm'),
+            SG_Soil_pH_H2O_0_100cm_mean = regionalmean(.,'SG_Soil_pH_H2O_0_100cm'),
+            SG_Soil_pH_H2O_0_100cm_std = regionalstd(.,'SG_Soil_pH_H2O_0_100cm'),
+            SG_Absolute_depth_to_bedrock_mean = regionalmean(.,'SG_Absolute_depth_to_bedrock'),
+            SG_Absolute_depth_to_bedrock_std = regionalstd(.,'SG_Absolute_depth_to_bedrock'),
+            #STDAGE_mean = regionalmean(.,'STDAGE'),
+            #STDAGE_std = regionalstd(.,'STDAGE'),
+            height_mean = regionalheight(.),
+            height_std = regionalheightstd(.),
+            #NDVI_mean = regionalmean(.,'NDVI'),
+            #NDVI_std = regionalstd(.,'NDVI'),
+            #cnRatio_mean = regionalmean(.,'cnRatio'),
+            #cnRatio_std = regionalstd(.,'cnRatio'),
+            Organic_Carbon_mean = regionalmean(.,'Organic_Carbon'),
+            Organic_Carbon_std = regionalstd(.,'Organic_Carbon'),
+            Nitrogen_mean = regionalmean(.,'Nitrogen'),
+            Nitrogen_std = regionalstd(.,'Nitrogen'),
+            meandensity = regionaldensity(.),
+            stddensity = regionaldensitysr(.), 
+            #HumanFootprint_mean = regionalmean(., 'HumanFootprint'),
+            #HumanFootprint_std = regionalstd(., 'HumanFootprint'),
+            #Human_Development_Percentage_mean = regionalmean(.,'Human_Development_Percentage'),
+            #Human_Development_Percentage_std = regionalstd(.,'Human_Development_Percentage'),
+            Human_Disturbance_mean = regionalmean(.,'Human_Disturbance'),
+            Human_Disturbance_std = regionalstd(.,'Human_Disturbance')
+                #CHELSA_Annual_Mean_Temperature_std = regionalstd(., 'CHELSA_Annual_Mean_Temperature')
+                #regionaldensity = regionaldensity(.)
+                )) %>%
+  #collect()%>%
+  ungroup()
+
+
+gridassociation
+```
+```{R}
+
+gridassociation %>%
+  filter( associationsimple>-500 & regionalrichness >-500) %>%
+  ggplot(., aes(x = associationsimple))+
+  geom_histogram(bins = 160)
+
+
+
+
+gridassociation %>%
+  filter(associationsimple>-500 & regionalrichness >-500 & associationpvalue>-555 & associationpvalue<555) %>%
+  ggplot(., aes(x = associationpvalue))+
+  geom_histogram(bins = 100)
+
+
+
+gridassociation %>%
+  filter(associationsimple>-500 & regionalrichness >-500 & associationnormpvalue>-555 & associationnormpvalue<555) %>%
+  ggplot(., aes(x = associationnormpvalue))+
+  geom_histogram(bins = 80)
+
+gridassociation %>%
+  filter(associationsimple>-500 & regionalrichness >-500 & associationnormpvalue>-555 & associationnormpvalue<555 & associationnormpvalue>=0.05) %>%
+  summarise(n())
+
+gridassociation %>%
+  filter(associationsimple>-500 & regionalrichness >-500 & associationnormpvalue>-555 & associationnormpvalue<555 & associationnormpvalue<0.05) %>%
+  summarise(n())
+
+
+
+
+
+summary(lm(associationpartial ~ associationsimple, data = gridassociation[gridassociation$associationsimple>-500 & gridassociation$associationpartial>-500,]))
+gridassociation %>%
+  filter(associationsimple>-500 & regionalrichness >-500) %>%
+  ggplot(., aes(x = regionalrichness))+
+  geom_histogram(bins = 80)
+
+
+```
+
+
+```{R}
+#regionalplt <- regionalplt %>%
+#  left_join(gridassociation, by = 'random')
+#names(regionalplt)
+
+```
+
+```{R}
+
+
+
+```
+
+
+```{R}
+
+write_csv(regionalplt, '~/Desktop/plot_level_associations_50km_180s_sig_20240404.csv')
+
+```
+
+
+
+```{R}
+
+solidplt <- regionalplt %>%
+  #filter(associationsimple > -555, regionalrichness > -555 & associationpvalue != -999 & associationsr != -999 ) %>%
+  group_by(random) %>%
+  summarise(#asso = first(association),
+            #assosimple = first(associationsimple),
+            #assopvalue = first(associationpvalue),
+            #asso2 = first(association2),
+            #assosr = first(associationsr),
+            #assoneg = first(associationneg),
+            #regionalrichness = first(regionalrichness),
+            #regionaldensity = first(regionaldensity),
+            #assoweight = first(associationweight),
+            lon = first(cell_lon),
+            lat = first(cell_lat),
+            #CHELSA_Annual_Mean_Temperature_mean = mean(CHELSA_Annual_Mean_Temperature),
+            #CHELSA_Annual_Mean_Temperature_std = sd(CHELSA_Annual_Mean_Temperature),
+            #CHELSA_Annual_Precipitation_mean = mean(CHELSA_Annual_Precipitation),
+            #CHELSA_Annual_Precipitation_std = sd(CHELSA_Annual_Precipitation),
+            #CHELSA_Mean_Temperature_of_Coldest_Quarter_mean = mean(CHELSA_Mean_Temperature_of_Coldest_Quarter),
+            #CHELSA_Mean_Temperature_of_Coldest_Quarter_std = sd(CHELSA_Mean_Temperature_of_Coldest_Quarter),
+            #CHELSA_Precipitation_of_Driest_Quarter_mean = mean(CHELSA_Precipitation_of_Driest_Quarter),
+            #CHELSA_Precipitation_of_Driest_Quarter_std = sd(CHELSA_Precipitation_of_Driest_Quarter),
+            #CHELSA_Isothermality_mean = mean(CHELSA_Isothermality),
+            #CHELSA_Isothermality_std = sd(CHELSA_Isothermality),
+            #CHELSA_Precipitation_of_Driest_Quarter_mean = mean(CHELSA_Precipitation_of_Driest_Quarter),
+            #CHELSA_Precipitation_of_Driest_Quarter_std = sd(CHELSA_Precipitation_of_Driest_Quarter),
+            #CHELSA_Temperature_Annual_Range_mean = mean(CHELSA_Temperature_Annual_Range),
+            #CHELSA_Temperature_Annual_Range_std = sd(CHELSA_Temperature_Annual_Range),
+            #PET_mean = mean(PET),
+            #PET_std = sd(PET),
+            #EarthEnvTopoMed_Elevation_mean = mean(EarthEnvTopoMed_Elevation),
+            
+            #EarthEnvTopoMed_Elevation_std = sd(EarthEnvTopoMed_Elevation),
+            #EarthEnvTopoMed_Slope_mean = mean(EarthEnvTopoMed_Slope),
+            #EarthEnvTopoMed_Slope_std = sd(EarthEnvTopoMed_Slope),
+            #EarthEnvTopoMed_Roughness_mean = mean(EarthEnvTopoMed_Roughness),
+            #EarthEnvTopoMed_Roughness_std = sd(EarthEnvTopoMed_Roughness),
+            #EarthEnvTopoMed_AspectSine_mean = mean(EarthEnvTopoMed_AspectSine),
+            #EarthEnvTopoMed_AspectSine_std = sd(EarthEnvTopoMed_AspectSine),
+            #EarthEnvTopoMed_AspectCosine_mean = mean(EarthEnvTopoMed_AspectCosine),
+            #EarthEnvTopoMed_AspectCosine_std = sd(EarthEnvTopoMed_AspectCosine),
+            #EarthEnvTopoMed_Eastness_mean = mean(EarthEnvTopoMed_Eastness),
+            #EarthEnvTopoMed_Eastness_std = sd(EarthEnvTopoMed_Eastness),
+            #EarthEnvTopoMed_Northness_mean = mean(EarthEnvTopoMed_Northness),
+            #EarthEnvTopoMed_Northness_std = sd(EarthEnvTopoMed_Northness),
+            #PresentTreeCover_mean = mean(PresentTreeCover),
+            #PresentTreeCover_std = sd(PresentTreeCover),
+            #CanopyHeight_mean = mean(CanopyHeight),
+            #CanopyHeight_std = sd(CanopyHeight),
+            #Tree_Density_mean = mean(Tree_Density),
+            #Tree_Density_std = sd(Tree_Density),
+            #SG_Sand_Content_0_100cm_mean = mean(SG_Sand_Content_0_100cm),
+            #SG_Sand_Content_0_100cm_std = sd(SG_Sand_Content_0_100cm),
+            #SG_Clay_Content_0_100cm_mean = mean(SG_Clay_Content_0_100cm),
+            #SG_Clay_Content_0_100cm_std = sd(SG_Clay_Content_0_100cm),
+            #SG_Silt_Content_0_100cm_mean = mean(SG_Silt_Content_0_100cm),
+            #SG_Silt_Content_0_100cm_std = sd(SG_Silt_Content_0_100cm),
+            #SG_Soil_pH_H2O_0_100cm_mean = mean(SG_Soil_pH_H2O_0_100cm),
+            #SG_Soil_pH_H2O_0_100cm_std = sd(SG_Soil_pH_H2O_0_100cm),
+            #SG_Absolute_depth_to_bedrock_mean = mean(SG_Absolute_depth_to_bedrock),
+            #SG_Absolute_depth_to_bedrock_std = sd(SG_Absolute_depth_to_bedrock),
+            #NDVI_mean = mean(NDVI),
+            #NDVI_std = sd(NDVI),
+            #cnRatio_mean = mean(cnRatio),
+            #cnRatio_std = sd(cnRatio),
+            WWF_Biome_mode = getmode(WWF_Biome),
+            #npp_mean = mean(Npp),
+            nplot = n()
+            #meandensity = mean(indidensity)
+            ) %>%
+  ungroup()
+
+#solidplt <- solidplt[complete.cases(solidplt$assosimple),]
+solidplt <- solidplt %>%
+  filter(nplot>=20)
+
+
+```
+
+
+```{R}
+
+solidplt <- solidplt %>%
+  left_join(gridassociation, by = 'random')
+
+solidplt
+
+```
+```{R}
+solidplt <- solidplt %>%
+  filter(associationsimple > -555, regionalrichness > -555  )
+
+```
+
+```{R}
+
+library(maps)
+
+worlddata <- map_data('world')
+
+ggplot() + 
+  geom_map(data = worlddata[worlddata$long<(-60) & worlddata$lat>15,], map = worlddata, aes(x = long, y = lat, group = group, map_id = region), fill = '#bcbcbc', color = '#bcbcbc', size = 0.5)+
+  geom_point(data = solidplt, aes(x = lon, y = lat, fill = associationsimple), shape = 22, stroke = NA, size = 2)+
+  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
+              '#0DFFEA', '#8CFF41', '#FFDD00',
+              '#FF3700', '#C30000'),limits = c(-0.4,0), oob = scales::squish)
+
+
+ggplot() + 
+  geom_map(data = worlddata[worlddata$long<(-60) & worlddata$lat>15,], map = worlddata, aes(x = long, y = lat, group = group, map_id = region), fill = '#bcbcbc', color = '#bcbcbc', size = 0.5)+
+  geom_point(data = solidplt, aes(x = lon, y = lat, fill = associationsimplespear), shape = 22, stroke = NA, size = 2)+
+  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
+              '#0DFFEA', '#8CFF41', '#FFDD00',
+              '#FF3700', '#C30000'),limits = c(-0.6,0), oob = scales::squish)
+
+
+ggplot() + 
+  geom_map(data = worlddata[worlddata$long<(-60) & worlddata$lat>15,], map = worlddata, aes(x = long, y = lat, group = group, map_id = region), fill = '#bcbcbc', color = '#bcbcbc', size = 0.5)+
+  geom_point(data = solidplt, aes(x = lon, y = lat, fill = associationpvalue), shape = 22, stroke = NA, size = 2)+
+  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
+              '#0DFFEA', '#8CFF41', '#FFDD00',
+              '#FF3700', '#C30000'),limits = c(0,0.05), oob = scales::squish)
+#ggplot() + 
+#  geom_map(data = worlddata[worlddata$long<(-60) & worlddata$lat>15,], map = worlddata, aes(x = long, y = lat, group = group, map_id = region), fill = '#bcbcbc', color = '#bcbcbc', size = 0.5)+
+#  geom_point(data = solidplt, aes(x = lon, y = lat, fill = asso2), shape = 22, stroke = NA, size = 4)+
+#  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
+ #             '#0DFFEA', '#8CFF41', '#FFDD00',
+  #            '#FF3700', '#C30000'),limits = c(-0.5,0.2), oob = scales::squish)
+
+
+ggplot() + 
+  geom_map(data = worlddata[worlddata$long<(-60) & worlddata$lat>15,], map = worlddata, aes(x = long, y = lat, group = group, map_id = region), fill = '#bcbcbc', color = '#bcbcbc', size = 0.5)+
+  geom_point(data = solidplt[solidplt$associationpvalue<0.05,], aes(x = lon, y = lat, fill = associationsimple), shape = 22, stroke = NA, size = 2)+
+  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
+              '#0DFFEA', '#8CFF41', '#FFDD00',
+              '#FF3700', '#C30000'),limits = c(-0.4,0), oob = scales::squish)
+
+"ggplot(solidplt, aes(x = lon, y = lat, fill = asso))+
+  geom_point(shape = 22, stroke = NA, size = 2)+
+  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
+              '#0DFFEA', '#8CFF41', '#FFDD00',
+              '#FF3700', '#C30000'),limits = c(-0.4,0), oob = scales::squish)
+  #scale_color_gradient2(limits = c(-20, 1), oob = scales::squish)
+
+
+ggplot(solidplt, aes(x = lon, y = lat, fill = assosimple))+
+  geom_point(shape = 22, stroke = NA, size = 2)+
+  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
+              '#0DFFEA', '#8CFF41', '#FFDD00',
+              '#FF3700', '#C30000'),limits = c(-2,1), oob = scales::squish)
+    
+"
+```
+
+```{R}
+solidplt %>%
+  filter(asso2/asso>=0.25 & asso2 < 0) %>%
+  ggplot(data = ., aes(x = lon, y = lat, fill = asso2)) + 
+  geom_map(data = worlddata[worlddata$long<(-60) & worlddata$lat>15,], map = worlddata, aes(x = long, y = lat, group = group, map_id = region), fill = '#bcbcbc', color = '#bcbcbc', size = 0.5)+
+  geom_point( shape = 22, stroke = NA, size = 4)+
+  scale_fill_gradientn(colours = c( '#0000FF', '#0074FF',
+              '#0DFFEA', '#8CFF41', '#FFDD00',
+              '#FF3700', '#C30000'),limits = c(-.5,.2), oob = scales::squish)
+
+
+subsolid <- solidplt %>%
+  filter(asso2/asso>=0.25 & asso2 < 0 & asso>-1)
+
+```
+
+
+
+```{R}
+
+solidplt %>%
+  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = asso))+
+  geom_point()+
+  geom_smooth(method = 'lm')
+
+solidplt %>%
+  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = assosimple))+
+  geom_point()+
+  geom_smooth(method = 'lm')
+
+
+
+solidplt %>%
+  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_std, y = asso))+
+  geom_point()+
+  geom_smooth(method = 'lm')+
+  scale_x_continuous(trans = 'log10')
+
+solidplt %>%
+  ggplot(., aes(x = CHELSA_Annual_Precipitation_mean, y = assosimple))+
+  geom_point()+
+  geom_smooth(method = 'lm')+
+  scale_x_continuous(trans = 'log10')
+
+solidplt %>%
+  ggplot(., aes(x = asso, y = assosr))+
+  geom_point()+
+  geom_smooth(method = 'lm')
+
+
+
+solidplt %>%
+  ggplot(., aes(x = asso, y = regionalrichness))+
+  geom_point()+
+  geom_smooth(method = 'lm')
+
+
+solidplt %>%
+  ggplot(., aes(x = assoneg, y = regionalrichness))+
+  geom_point()+
+  geom_smooth(method = 'lm')
+
+
+
+```
+
+```{R}
+
+solidplt %>%
+  ggplot(., aes(x = asso))+
+  geom_histogram(bins = 80)
+
+
+solidplt %>%
+  ggplot(., aes(x = assoneg))+
+  geom_histogram()
+
+
+```
+
+
+
+```{R}
+
+
+solidplt$longitude <- solidplt$lon
+solidplt$latitude <- solidplt$lat
+solidplt$assosimple <- solidplt$associationsimple
+#solidplt$assosimplespear <- solidplt$associationsimplespear
+
+write_csv(solidplt, '~/Desktop/association/grid_level_association_200km_sig_180s_20240701_reserved_nocover.csv')
+
+
+```
+
