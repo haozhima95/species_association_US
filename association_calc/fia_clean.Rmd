@@ -33,9 +33,7 @@ statelist <- unique(survey$STATEAB)
 
 
 ```
-
-
-
+### Loop in different states.
 
 ```{r}
 
@@ -44,11 +42,13 @@ for(i in statelist){
 #statename <- statelist[sample(1:length(statelist),1)]
 statename <- i 
 
+## Load the condition table.
 
 conddf <- read.csv(paste0('~/Desktop/association/',statename,'_COND.csv'))
 
 
 
+## Filter out the plots with intensive human-related evidence.
 
 subcond <- conddf %>%
   #filter(RESERVCD == 1)
@@ -63,7 +63,7 @@ subcond <- subcond %>%
 
 
 
-
+## Load the plot table. 
 plotdf <- read.csv(paste0('~/Desktop/association/',statename, '_PLOT.csv'))
 
 #head(plotdf)
@@ -95,6 +95,8 @@ subplottomerge <- subplot %>%
   )
 
 write_csv(subplottomerge, paste0('~/Desktop/association/fia_state_tables/',statename,'_plotinfo.csv'))
+
+## Load the tree info table.
 
 
 treedf <- read.csv(paste0('~/Desktop/association/', statename,'_TREE.csv'))
