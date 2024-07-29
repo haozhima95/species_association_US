@@ -17,7 +17,7 @@ library(feather)
 
 ```
 
-
+#### Load the condition table and the tree table. 
 ```{r}
 setwd('~/Desktop/association/fia_state_tables')
 df <- do.call(rbind, lapply(list.files(path = '.', pattern = 'plotinfo.csv'), read.csv, header = T, sep = ','))
@@ -30,7 +30,7 @@ treeds <- do.call(rbind, lapply(list.files(path = '.', pattern = 'treeinfo.csv')
   
 ```
 
-
+### Convert inches to meters.
 ```{r}
 
 treeds <- treeds %>%
@@ -38,6 +38,7 @@ treeds <- treeds %>%
          ht_m = HT*0.3048,
          acht_m = ACTUALHT*0.3048)
 
+#### Filter out small trees.
 
 treeds <- treeds %>%
   filter(dbh_cm >= 10)
@@ -63,14 +64,6 @@ write_csv(df, '~/Desktop/association/fia_data/fia_plots.csv')
 ```
 
 
-```{r}
-
-
-```
-
-
-```{r}
-```
 
 
 
