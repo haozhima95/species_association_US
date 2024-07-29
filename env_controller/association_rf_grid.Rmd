@@ -18,12 +18,6 @@ names(assogrids)
 ```{R}
 library(sp)
 
-#library(spatstat)
-
-
-#library(gstat)
-
-#library(geoR)
 
 library(ncf)
 
@@ -49,345 +43,6 @@ library(mgcv)
 ```
 
 
-```{r}
-
-assogrids %>%
-  ggplot(., aes(x = regionalrichness))+
-  geom_histogram(bins = 80)
-
-assogrids %>%
-  ggplot(., aes(x = Human_Disturbance_mean))+
-  geom_histogram()
-
-assogrids %>%
-  ggplot(., aes(x = Human_Development_Percentage_mean))+
-  geom_histogram()
-
-```
-
-```{r}
-summary(assogrids$regionalrichness)
-
-```
-
-
-
-```{r}
-set.seed(10)
-clusterbands <- assogrids %>%
-  dplyr::select(c(
-    regionalrichness,
-    Human_Disturbance_mean,
-    Human_Development_Percentage_mean
-  ))
-
-clusterpca <- prcomp(clusterbands, center = T, scale.= T)
-
-
-pcclusters <- clusterpca$x
-pcclusters <- as.data.frame(pcclusters)
-
-clusters <- kmeans(pcclusters, centers = 4, iter.max = 10, nstart = 1)
-
-assogrids$clusters <- clusters$cluster
-
-
-```
-
-```{r}
-
-assogrids %>%
-  
-  ggplot(., aes(x = regionalrichness, group = as.factor(clusters), fill = as.factor(clusters)))+
-  geom_histogram(position = 'dodge')
-
-assogrids %>% 
-  ggplot(., aes(x = Human_Disturbance_mean, group = as.factor(clusters), fill = as.factor(clusters)))+
-  geom_histogram(position = 'dodge')
-
-assogrids %>%
-  ggplot(., aes(x = Human_Development_Percentage_mean, group = as.factor(clusters), fill = as.factor(clusters)))+
-  geom_histogram(position = 'dodge')
-
-assogrids %>%
-  ggplot(., aes(x = regionalrichness, y = Human_Disturbance_mean, group = as.factor(clusters), color = as.factor(clusters)))+
-  geom_point()
-
-
-```
-
-```{r}
-
-assogrids %>%
-  ggplot(., aes(x = associatoinsimplespear, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-assogrids %>%
-  filter(assosimplep<=1)%>%
-  ggplot(., aes(x = assosimplep))+
-  geom_histogram()
-
-summary(lm(assosimple~associatoinsimplespear, data = assogrids))
-
-```
-```{r}
-
-assogrids %>%
-  ggplot(., aes(x = regionalba, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'gam')+
-  scale_x_continuous(trans = 'log1p')
-
-
-assogrids %>%
-  ggplot(., aes(x = regionalba, y = assosimplespear))+
-  geom_point()+
-  geom_smooth(method = 'gam')+
-  scale_x_continuous(trans = 'log1p')
-
-
-summary(lm(assosimple~log1p(regionalba), data= assogrids))
-
-```
-
-low heterogeneity
-
-```{r}
-subgrids<-assogrids %>%
-  filter(EarthEnvTopoMed_Elevation_std<100 & CHELSA_Annual_Mean_Temperature_std < 10 & CHELSA_Annual_Precipitation_std < 200)
-
-#regressionmatrix2 <- anti_join(regressionmatrix,regressionmatrix1)
-
-subgrids %>%
-  filter(assosimple<0 & assosimple > -0.5)%>%
-  ggplot(., aes(x = assosimple, y = regionalba))+
-  geom_point()+
-  geom_smooth(method = 'gam')
-  #scale_x_continuous(trans = 'log1p')
-
-
-subgrids %>%
-  ggplot(., aes(x = regionalba, y = assosimplespear))+
-  geom_point()+
-  geom_smooth(method = 'gam')+
-  scale_x_continuous(trans = 'log1p')
-
-
-summary(lm(regionalba~assosimple, data= subgrids[subgrids$assosimple<0 & subgrids$assosimple> -0.4,]))
-summary(lm(assosimplespear~log1p(regionalba), data= subgrids))
-
-
-summary(gam(regionalba~assosimple, data= subgrids[subgrids$assosimple<0 & subgrids$assosimple> -0.4,]))
-
-```
-
-
-```{r}
-assogrids %>% 
-  ggplot(., aes(x = assosimple))+
-  geom_histogram()
-```
-
-
-
-```{R}
-test <- rosnerTest(assogrids[,'assosimple'], k = 100)$all.stats
-
-test <- test[test$Outlier == 'TRUE',]
-
-assogrids <- assogrids[-test$Obs.Num,]
-
-
-```
-
-```{r}
-assogrids %>% 
-  ggplot(., aes(x = assosimple))+
-  geom_histogram()
-```
-```{R}
-
-nrow(assogrids[assogrids$assosimple>=0,])/nrow(assogrids)
-
-nrow(assogrids[assogrids$assosimplespear>=0,])/nrow(assogrids)
-```
-
-
-
-```{R}
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = assosimplespear))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-assogrids %>%
-  ggplot(., aes(x = WWF_Biome_mode, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-assogrids %>%
-  ggplot(., aes(x = cnRatio_mean, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Precipitation_mean, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'lm')+
-  scale_x_continuous(trans = 'log10')
-
-
-assogrids %>%
-  ggplot(., aes(x = SG_Sand_Content_0_100cm_mean, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-assogrids %>%
-  ggplot(., aes(x = nplot, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'lm')+
-  scale_x_continuous(trans = 'log10')
-
-assogrids %>%
-  ggplot(., aes(x = meandensity, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-assogrids %>%
-  ggplot(., aes(x = HumanFootprint_mean, y = assosimple))+
-  geom_point()+
-  geom_smooth(method = 'gam')
-
-
-
-
-```
-
-```{R}
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = assoneg))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-assogrids %>%
-  ggplot(., aes(x = WWF_Biome_mode, y = assoneg))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-assogrids %>%
-  ggplot(., aes(x = cnRatio_mean, y = assoneg))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Precipitation_mean, y = assoneg))+
-  geom_point()+
-  geom_smooth(method = 'lm')+
-  scale_x_continuous(trans = 'log10')
-
-
-assogrids %>%
-  ggplot(., aes(x = SG_Sand_Content_0_100cm_mean, y = assoneg))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-assogrids %>%
-  ggplot(., aes(x = nplot, y = assoneg))+
-  geom_point()+
-  geom_smooth(method = 'lm')+
-  scale_x_continuous(trans = 'log10')
-
-
-```
-
-
-
-```{R}
-
-assogrids <- assogrids %>%
-  filter(cnRatio_mean>0)
-
-```
-
-```{R}
-names(assogrids)
-
-```
-
-```{R}
-
-library(mgcv)
-ml <- gam(assosimple~HumanFootprint_mean , data = assogrids)
-summary(ml)
-
-assogrids$gamresi <- ml$residuals
-
-```
-
-
-```{R}
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = gamresi))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-assogrids %>%
-  ggplot(., aes(x = WWF_Biome_mode, y = gamresi))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-assogrids %>%
-  ggplot(., aes(x = cnRatio_mean, y = gamresi))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Precipitation_mean, y = gamresi))+
-  geom_point()+
-  geom_smooth(method = 'lm')+
-  scale_x_continuous(trans = 'log10')
-
-
-assogrids %>%
-  ggplot(., aes(x = SG_Sand_Content_0_100cm_mean, y = gamresi))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-
-assogrids %>%
-  ggplot(., aes(x = nplot, y = gamresi))+
-  geom_point()+
-  geom_smooth(method = 'lm')+
-  scale_x_continuous(trans = 'log10')
-
-assogrids %>%
-  ggplot(., aes(x = meandensity, y = gamresi))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-```
 
 ```{R}
 
@@ -396,58 +51,27 @@ bandnames <- c(
   'CHELSA_Annual_Mean_Temperature_std',
   'CHELSA_Annual_Precipitation_mean',
   'CHELSA_Annual_Precipitation_std',
-  #"CHELSA_Mean_Temperature_of_Coldest_Quarter_mean",
-  #"CHELSA_Precipitation_of_Driest_Quarter_mean",
-  #'CHELSA_Precipitation_of_Driest_Quarter_std',
   "CHELSA_Isothermality_mean",
   'CHELSA_Isothermality_std',
   "CHELSA_Temperature_Annual_Range_mean",
   'CHELSA_Temperature_Annual_Range_std',
   'regionalrichness',
-  #'PET_mean',
-  #'PET_std'
-  #"CanopyHeight_mean" ,
-  #"CanopyHeight_std", 
-  #"EarthEnvTopoMed_Elevation_mean",
-  #"EarthEnvTopoMed_Slope_mean",
-  #'EarthEnvTopoMed_Slope_std'
-  #"EarthEnvTopoMed_Roughness_mean",
-  #'EarthEnvTopoMed_Roughness_std',
-  #"EarthEnvTopoMed_AspectSine_mean",
-  #"EarthEnvTopoMed_AspectCosine_mean",
-  #"EarthEnvTopoMed_Eastness_mean",
-  #"EarthEnvTopoMed_Northness_mean",
   "meandensity",
   'stddensity',
   'height_mean',
   'height_std',
-  #'NDVI_mean',
-  #'NDVI_std',
-  #"CanopyHeight_mean" ,
-  #"Tree_Density_mean" ,
   "SG_Sand_Content_0_100cm_mean",
   "SG_Sand_Content_0_100cm_std",
   "SG_Clay_Content_0_100cm_mean",
   "SG_Silt_Content_0_100cm_mean",
   "SG_Soil_pH_H2O_0_100cm_mean",
   'SG_Soil_pH_H2O_0_100cm_std',
-  #"EarthEnvTopoMed_Elevation_mean",
-  #'EarthEnvTopoMed_Roughness_mean',
-  #'EarthEnvTopoMed_Elevation_std',
-  #'HumanFootprint_mean',
-  #'HumanFootprint_std'
   "SG_Absolute_depth_to_bedrock_mean",
   "SG_Absolute_depth_to_bedrock_std",
-  #"cnRatio_mean",
-  #'cnRatio_std',
   'Organic_Carbon_mean',
   'Organic_Carbon_std',
   'Nitrogen_mean',
   'Nitrogen_std'
-  #'Human_Disturbance_mean',
-  #'Human_Disturbance_std',
-  #'Human_Development_Percentage_mean',
-  #'Human_Development_Percentage_std'
 )
 
 vartomodel <- 'assosimple'
@@ -468,15 +92,6 @@ regressionmatrix <- assogrids %>%
 
 
 
-```{R}
-
-regressionmatrix1<-regressionmatrix %>%
-  filter(CHELSA_Annual_Mean_Temperature_std<10 & CHELSA_Annual_Precipitation_std < 200 & CHELSA_Temperature_Annual_Range_std < 10 & height_std < 10 & stddensity < 0.005)
-
-#regressionmatrix2 <- anti_join(regressionmatrix,regressionmatrix1)
-
-
-```
 
 
 
@@ -496,104 +111,18 @@ library(HH)
 
 ```
 
-
-```{r}
-regressionmatrix %>%
-  ggplot(., aes(x = CHELSA_Annual_Precipitation_mean))+
-  geom_histogram(bins = 80)
-
-regressionmatrix %>%
-  ggplot(., aes(x = regionalrichness))+
-  geom_histogram(bins = 80)
-
-regressionmatrix %>%
-  ggplot(.,aes(x = assosimple))+
-  geom_histogram(bins = 100)
-
-
-regressionmatrix %>%
-  ggplot(., aes(x = height_mean))+
-  geom_histogram(bins = 100)
-
-
-regressionmatrix %>%
-  ggplot(., aes(x = CHELSA_Annual_Precipitation_std))+
-  geom_histogram(bins = 100)
-
-```
-
-```{r}
-regressionmatrix %>%
-  ggplot(., aes(x = CHELSA_Annual_Precipitation_mean, y= regionalrichness))+
-  geom_point()+
-  geom_smooth()
-```
-
-
-
 ```{R}
 
 
 regressionmatrix1 <- regressionmatrix %>%
   #filter(CHELSA_Annual_Precipitation_mean < 3000 & regionalrichness < 75, assosimple < 0.23 & CHELSA_Annual_Precipitation_std < 500)%>%
   dplyr::select(c(
-    CHELSA_Annual_Mean_Temperature_mean,
-  #CHELSA_Annual_Mean_Temperature_std,
+  CHELSA_Annual_Mean_Temperature_mean,
   CHELSA_Annual_Precipitation_mean,
-  #CHELSA_Annual_Precipitation_std,
-  #"CHELSA_Mean_Temperature_of_Coldest_Quarter_mean",
-  #"CHELSA_Precipitation_of_Driest_Quarter_mean",
-  #'CHELSA_Precipitation_of_Driest_Quarter_std',
-  #CHELSA_Isothermality_mean,
-  #CHELSA_Isothermality_std,
   CHELSA_Temperature_Annual_Range_mean,
-  #CHELSA_Temperature_Annual_Range_std,
   regionalrichness,
   height_mean,
-  #height_std,
   meandensity,
-  #stddensity,
-  #'PET_mean',
-  #'PET_std'
-  #"CanopyHeight_mean" ,
-  #"CanopyHeight_std", 
-  #"EarthEnvTopoMed_Elevation_mean",
-  #"EarthEnvTopoMed_Slope_mean",
-  #'EarthEnvTopoMed_Slope_std'
-  #"EarthEnvTopoMed_Roughness_mean",
-  #'EarthEnvTopoMed_Roughness_std',
-  #"EarthEnvTopoMed_AspectSine_mean",
-  #"EarthEnvTopoMed_AspectCosine_mean",
-  #"EarthEnvTopoMed_Eastness_mean",
-  #"EarthEnvTopoMed_Northness_mean",
-  #meandensity,
-  #stddensity,
-  #NDVI_mean,
-  #NDVI_std,
-  #"CanopyHeight_mean" ,
-  #"Tree_Density_mean" ,
-  #SG_Sand_Content_0_100cm_mean,
-  #SG_Sand_Content_0_100cm_std,
-  #"SG_Clay_Content_0_100cm_mean",
-  #SG_Silt_Content_0_100cm_mean,
-  #SG_Soil_pH_H2O_0_100cm_mean,
-  #SG_Soil_pH_H2O_0_100cm_std,
-  #"EarthEnvTopoMed_Elevation_mean",
-  #'EarthEnvTopoMed_Roughness_mean',
-  #'EarthEnvTopoMed_Elevation_std',
-  #'HumanFootprint_mean',
-  #'HumanFootprint_std'
-  #SG_Absolute_depth_to_bedrock_mean,
-  #Organic_Carbon_mean,
-  #Organic_Carbon_std,
-  #Nitrogen_mean,
-  #Nitrogen_std,
-  #cnRatio_mean,
-  #cnRatio_std,
-  #Human_Disturbance_mean,
-  #Human_Disturbance_std,
-  #Human_Development_Percentage_mean,
-  #Human_Development_Percentage_std,
   assosimple
   ))
 ```
@@ -614,14 +143,12 @@ plot(cor.cluster)
 ```
 
 
-
-
 ```{R}
 localH2O <- h2o.init(nthreads = 8, max_mem_size = '14g', ignore_config = TRUE)
 
 regmatrixh2o <- as.h2o(regressionmatrix1, destination_frame = 'regMatrixH2O')
 
-rf.params <- list(ntrees = 400,
+rf.params <- list(ntrees = 250,
                   mtries = c(1:7),
                   min_rows = c(1:20))
 
@@ -807,8 +334,6 @@ p6<-shapdata %>%
               theme(axis.title = element_text(color = '#000000', size = 20), axis.text = element_text(color = '#000000', size = 20)))
 
 
-
-
 ```
 
 ```{r}
@@ -825,216 +350,4 @@ ggarrange(p1[[1]],p2[[1]],
 
 
 ```
-
-
-
-
-
-```{R}
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = assoneg))+
-  geom_point()+
-  geom_smooth()
-
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Precipitation_mean, y = assoneg))+
-  geom_point()+
-  geom_smooth()+
-  scale_x_continuous(trans = 'log10')
-
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Precipitation_of_Driest_Quarter_mean, y = assoneg))+
-  geom_point()+
-  geom_smooth()
-
-```
-
-```{R}
-summary(lm(asso~PresentTreeCover_mean + CHELSA_Annual_Mean_Temperature_mean+log10(CHELSA_Annual_Precipitation_mean)+log10(EarthEnvTopoMed_Elevation_mean)+cnRatio_mean+SG_Sand_Content_0_100cm_mean, data = assogrids))
-
-
-summary(lm(assoneg~PresentTreeCover_mean + CHELSA_Annual_Mean_Temperature_mean+log10(CHELSA_Annual_Precipitation_mean)+log10(EarthEnvTopoMed_Elevation_mean)+cnRatio_mean+SG_Sand_Content_0_100cm_mean, data = assogrids))
-
-```
-
-```{R}
-modely <- lm(asso~PresentTreeCover_mean+CHELSA_Annual_Mean_Temperature_mean+log10(CHELSA_Annual_Precipitation_mean)+log10(EarthEnvTopoMed_Elevation_mean)+cnRatio_mean, data = assogrids)
-
-modelx <- lm(SG_Sand_Content_0_100cm_mean ~ PresentTreeCover_mean+CHELSA_Annual_Mean_Temperature_mean+log10(CHELSA_Annual_Precipitation_mean)+log10(EarthEnvTopoMed_Elevation_mean)+cnRatio_mean, data = assogrids)
-
-```
-
-
-
-```{R}
-summary(lm(modely$residuals~modelx$residuals))
-
-modeldf <- cbind(modelx$residuals, modely$residuals)
-
-modeldf <- as.data.frame(modeldf)
-
-modeldf %>%
-  ggplot(., aes(x = V1, y = V2))+
-  geom_point()+
-  geom_smooth(method = 'lm')
-
-```
-
-```{R}
-modelall <- lm(asso~PresentTreeCover_mean + CHELSA_Annual_Mean_Temperature_mean+log10(CHELSA_Annual_Precipitation_mean)+log10(EarthEnvTopoMed_Elevation_mean)+cnRatio_mean+SG_Sand_Content_0_100cm_mean, data = assogrids)
-
-
-
-
-```
-
-
-
-
-
-```{R}
-
-allresi <- modelall$residuals
-
-
-
-assogrids <- cbind(assogrids,allresi)
-
-```
-
-
-```{R}
-
-coordinates(assogrids) <- ~lon+lat
-
-proj4string(assogrids) <- CRS("+init=epsg:4326")
-
-```
-
-
-```{R}
-vcloud.resi <- variogram(allresi~1, data = assogrids, cloud = F, cutoff = 1000, width = 10)
-
-
-```
-
-```{R}
-summary(vcloud.resi$dist)
-
-```
-
-```{R}
-
-resi.fit <- fit.variogram(vcloud.resi, vgm(22,'Sph', NA, 0), fit.kappa = T)
-
-resi.fit
-
-```
-
-```{R}
-
-library(automap)
-```
-
-```{R}
-plot(vcloud.resi)
-
-```
-
-```{R}
-library(ncf)
-
-moranmodel <- spline.correlog(x = coordinates(assogrids)[,1], y = coordinates(assogrids)[,2], z = assogrids$allresi, resamp=20, quiet=TRUE,latlon=T,xmax=1000,df=100,na.rm=T)
-
-```
-
-```{R}
-plot(moranmodel)
-
-```
-
-```{R}
-
-library(ape)
-
-assodist <- as.matrix(dist(cbind(assogrids$lon, assogrids$lat)))
-
-assodist.inv <- 1/assodist
-
-diag(assodist.inv) <- 0
-
-```
-
-
-
-```{R}
-Moran.I(assogrids$allresi, assodist.inv)
-
-
-```
-
-
-```{r}
-
-library(partykit)
-library(ggparty)
-
-```
-
-
-```{r}
-
-assotree <- ctree(associationsimple~ regionalrichness , maxdepth = 3, data = assogrids)
-
-```
-
-
-```{r}
-
-plot(assotree)
-
-```
-
-
-```{r}
-
-#dd <- scale(regressionmatrix)
-
-summary(lm(scale(assosimplespear)~scale(CHELSA_Annual_Mean_Temperature_mean) + scale(CHELSA_Annual_Precipitation_mean) + scale(regionalrichness) + scale(SG_Sand_Content_0_100cm_mean) + scale(Organic_Carbon_mean) + scale(Nitrogen_mean) + scale(Human_Disturbance_mean),data = assogrids))
-
-
-summary(lm(scale(associationsimple)~scale(CHELSA_Annual_Mean_Temperature_mean) + scale(CHELSA_Annual_Precipitation_mean) + scale(regionalrichness) + scale(SG_Sand_Content_0_100cm_mean) + scale(Organic_Carbon_mean) + scale(Nitrogen_mean) + scale(Human_Disturbance_mean),data = assogrids))
-
-
-```
-
-
-```{r}
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = assosimplespear))+
-  geom_point()
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Precipitation_mean, y = assosimplespear))+
-  geom_point()+
-  scale_x_continuous(trans = 'log10')
-
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Mean_Temperature_mean, y = associationsimple))+
-  geom_point()
-
-assogrids %>%
-  ggplot(., aes(x = CHELSA_Annual_Precipitation_mean, y = associationsimple))+
-  geom_point()+
-  scale_x_continuous(trans = 'log10')
-
-
-```
-
-
-
-
 
