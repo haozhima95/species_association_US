@@ -1,0 +1,149 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-06-01"
+---
+
+### This script is used to play with fia databases
+
+#### Load packages
+
+```{r}
+library(ggplot2)
+
+library(readr)
+
+library(dplyr)
+```
+```{r}
+
+survey <- read.csv('~/Desktop/association/CSV_FIADB_ENTIRE/ENTIRE_SURVEY.csv')
+
+head(survey)
+
+survey <- survey %>%
+  filter(!(STATEAB %in% c('FM', 'GU', 'MH', 'MP', 'VI', 'PW')))
+
+```
+
+```{r}
+
+statelist <- unique(survey$STATEAB)
+#statelist <- statelist[-c('FM', 'GU', 'MH', 'MP', 'VI', 'PW')]
+
+
+```
+
+
+
+
+```{r}
+
+for(i in statelist){
+
+#statename <- statelist[sample(1:length(statelist),1)]
+statename <- i 
+
+
+conddf <- read.csv(paste0('~/Desktop/association/',statename,'_COND.csv'))
+
+
+
+
+subcond <- conddf %>%
+  #filter(RESERVCD == 1)
+  filter(RESERVCD == 1 | (TRTCD1 == 0 & TRTCD2 == 0 & TRTCD3 == 0 & PREV_AFFORESTATION_CD %in% c(0,NA) & AFFORESTATION_CD %in% c(0,NA)))
+subcond <- subcond %>%
+  filter(STDORGCD == 0)
+subcond <- subcond %>%
+  filter(CONDPROP_UNADJ >= 0.75)
+
+subcond <- subcond %>%
+  filter(COND_STATUS_CD == 1)
+
+
+
+
+plotdf <- read.csv(paste0('~/Desktop/association/',statename, '_PLOT.csv'))
+
+#head(plotdf)
+
+subcondtomerge <- subcond %>%
+  dplyr::group_by(PLT_CN)%>%
+  dplyr::filter(INVYR == max(INVYR))%>%
+  ungroup()
+subcondtomerge <- subcondtomerge%>%
+  dplyr::select(c(PLT_CN, STDAGE,CONDID, COND_STATUS_CD,CONDPROP_UNADJ))
+#head(subcondtomerge)
+
+subplot <- subcondtomerge %>%
+ left_join(plotdf, by = c('PLT_CN' = 'CN'))
+
+subplottomerge <- subplot %>%
+  dplyr::select(
+    c(
+      PLT_CN,
+      INVYR,
+      LAT,
+      LON,
+      STATECD,
+      PLOT_STATUS_CD,
+      STDAGE,
+      CONDID,
+      CONDPROP_UNADJ
+    )
+  )
+
+write_csv(subplottomerge, paste0('~/Desktop/association/fia_state_tables/',statename,'_plotinfo.csv'))
+
+
+treedf <- read.csv(paste0('~/Desktop/association/', statename,'_TREE.csv'))
+
+
+subtree <- subplottomerge %>%
+  left_join(treedf, by = c('PLT_CN' = 'PLT_CN'))
+
+
+
+subtree <- subtree %>%
+  filter(STATUSCD %in% c(0,1))
+
+
+subtreetooutput <- subtree %>%
+  select(
+    c(
+      PLT_CN,
+      INVYR.x,
+      LAT,
+      LON,
+      STATECD.x,
+      PLOT_STATUS_CD,
+      STDAGE,
+      CN,
+      PLOT,
+      SUBP,
+      TREE,
+      CONDID.x,
+      AZIMUTH,
+      STATUSCD,
+      SPCD,
+      SPGRPCD,
+      DIA,
+      DIAHTCD,
+      HT,
+      HTCD,
+      ACTUALHT,
+      CONDPROP_UNADJ
+    )
+  )
+
+write_csv(subtreetooutput, paste0('~/Desktop/association/fia_state_tables/',statename, '_treeinfo.csv'))
+
+}
+
+```
+
+
+
+
+
